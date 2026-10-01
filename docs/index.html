@@ -86,6 +86,15 @@ input[type=date],input[type=month]{flex:1;min-width:0;padding:8px 10px;border:1p
 .manual{display:flex;gap:8px;margin-top:8px}
 .manual input{flex:1;min-width:0;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);font-variant-numeric:tabular-nums}
 .manual button{padding:0 16px;border:0;border-radius:10px;background:var(--ink);color:var(--paper);font-weight:700}
+/* UI scale (camera video itself is not scaled) */
+:root{--z:1.3}
+.wrap,.sheetin,.camtop,.toastin,.camhint span,.camlook #lookup{zoom:var(--z)}
+.camlook{position:absolute;left:12px;right:12px;bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:3}
+.camlook #lookup{margin:0 auto;max-width:440px}
+@media (max-width:480px){.stamp{width:60px;height:60px}.stamp .d{font-size:22px}.nav{width:34px}.datebar input[type=date]{padding:8px 4px;font-size:15px}}
+.zoomctl{display:flex;align-items:center;gap:4px}
+.zoomctl button{min-width:40px;padding:6px 8px!important}
+.zoomctl button[aria-pressed=true]{background:var(--ink)!important;color:var(--paper);border-color:var(--ink)!important}
 /* full-screen camera */
 .cam{position:fixed;inset:0;background:#000;z-index:15;display:none;flex-direction:column}
 .cam.on{display:flex}
@@ -109,7 +118,6 @@ input[type=date],input[type=month]{flex:1;min-width:0;padding:8px 10px;border:1p
 .toast .t2{font-size:18px;opacity:.85;word-break:break-all}
 .toast .badge{font-size:18px;padding:2px 10px}
 .camhint{position:absolute;left:0;right:0;bottom:calc(14px + env(safe-area-inset-bottom,0px));text-align:center;color:#fff;font-size:14px;text-shadow:0 1px 3px #000}
-body.camOn #lookup.on{position:fixed;left:12px;right:12px;bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:18;margin:0;max-width:576px;margin:0 auto}
 body.camOn{overflow:hidden}
 .msg{min-height:22px;margin:10px 2px 0;font-size:14px;color:var(--ink2)}
 .msg.warn{color:var(--stamp)} .msg.ok{color:var(--ok)}
@@ -170,6 +178,7 @@ body.camOn{overflow:hidden}
   border-radius:16px 16px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));box-shadow:0 -8px 30px rgba(20,30,50,.18);
   transform:translateY(105%);transition:transform .2s ease;z-index:20;max-width:600px;margin:0 auto}
 .sheet.on{transform:none}
+.sheet:not(.on){visibility:hidden}
 @media (prefers-reduced-motion:reduce){.sheet{transition:none}}
 .sheet .code{font-size:30px;line-height:1.2;font-weight:900;word-break:break-all;font-variant-numeric:tabular-nums}
 .sheet .sizes{gap:10px}
@@ -222,11 +231,12 @@ body.camOn{overflow:hidden}
     </div>
     <div class="cambody">
       <div id="reader"></div>
-      <div class="toast" id="toast" aria-live="assertive"></div>
-      <div class="camhint" id="camHint">把條碼放進框內</div>
+      <div class="toast" id="toastBox"><div class="toastin" id="toast" aria-live="assertive"></div></div>
+      <div class="camhint"><span id="camHint">把條碼放進框內</span></div>
+      <div class="camlook" id="camLook"></div>
     </div>
   </div>
-  <div class="lookup" id="lookup" role="status" aria-live="assertive"></div>
+  <span id="lookHome" hidden></span><div class="lookup" id="lookup" role="status" aria-live="assertive"></div>
 
   <div class="alt"><button id="photoBtn">拍照辨識</button></div>
   <input type="file" id="photo" accept="image/*" capture="environment" hidden>
@@ -265,11 +275,17 @@ body.camOn{overflow:hidden}
 
   <div class="foot">
     <span id="syncState">連線中…</span>
-    <span class="row"><button id="install" hidden>安裝到手機</button><button id="csv">匯出 CSV</button></span>
+    <span class="row" style="flex-wrap:wrap;justify-content:flex-end"><button id="install" hidden>安裝到手機</button><button id="csv">匯出 CSV</button></span>
+  </div>
+  <div class="foot">
+    <span>文字大小</span>
+    <span class="zoomctl" id="zoomctl">
+      <button data-z="1">小</button><button data-z="1.15">中</button><button data-z="1.3">大</button><button data-z="1.5">特大</button>
+    </span>
   </div>
 </div>
 
-<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="shCode">
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="shCode"><div class="sheetin">
   <div class="meta">剛掃到</div>
   <div class="code" id="shCode"></div>
   <div class="meta" id="shWarn" style="color:var(--stamp)"></div>
@@ -279,7 +295,7 @@ body.camOn{overflow:hidden}
   <div class="meta">點尺寸就儲存</div>
   <div class="sizes" id="shSizes"></div>
   <button class="cancel" id="shCancel">不要登記這張</button>
-</div>
+</div></div>
 
 <script>
 (function(){
@@ -366,8 +382,8 @@ body.camOn{overflow:hidden}
   function camToast(t1,t2,bad){
     if(!camOn()) return;
     const t=$('toast'); t.innerHTML='<div class="t1">'+t1+'</div>'+(t2?'<div class="t2">'+t2+'</div>':'');
-    t.classList.add('on'); const c=$('cam'); c.classList.remove('hit','bad'); void c.offsetWidth; c.classList.add(bad?'bad':'hit');
-    clearTimeout(toastT); toastT=setTimeout(()=>{ t.classList.remove('on'); c.classList.remove('hit','bad'); }, 1600);
+    $('toastBox').classList.add('on'); const c=$('cam'); c.classList.remove('hit','bad'); void c.offsetWidth; c.classList.add(bad?'bad':'hit');
+    clearTimeout(toastT); toastT=setTimeout(()=>{ $('toastBox').classList.remove('on'); c.classList.remove('hit','bad'); }, 1600);
   }
   function camInfo(){
     if(!camOn()) return;
@@ -628,7 +644,7 @@ body.camOn{overflow:hidden}
   $('scan').onclick=async()=>{
     if(typeof Html5Qrcode==='undefined'){ say('掃描元件載入失敗，請改用拍照或手動輸入','warn'); return; }
     if(scanner) return;
-    sessionN=0; $('cam').classList.add('on'); document.body.classList.add('camOn'); $('lookup').classList.remove('on'); camInfo();
+    sessionN=0; $('cam').classList.add('on'); document.body.classList.add('camOn'); $('lookup').classList.remove('on'); $('camLook').appendChild($('lookup')); camInfo();
     const F=Html5QrcodeSupportedFormats;
     scanner=new Html5Qrcode('reader',{verbose:false,experimentalFeatures:{useBarCodeDetectorIfSupported:true},
       formatsToSupport:[F.CODABAR,F.CODE_128,F.CODE_39,F.ITF,F.EAN_13,F.EAN_8,F.QR_CODE]});
@@ -641,7 +657,7 @@ body.camOn{overflow:hidden}
   };
   async function stopScan(){
     if(scanner){ try{await scanner.stop();}catch(e){} try{scanner.clear();}catch(e){} }
-    scanner=null; $('cam').classList.remove('on'); document.body.classList.remove('camOn'); $('lookup').classList.remove('on');
+    scanner=null; $('cam').classList.remove('on'); document.body.classList.remove('camOn'); $('lookup').classList.remove('on'); $('lookHome').after($('lookup'));
     if(sessionN) say('這次掃了 '+sessionN+' 張','ok');
   }
   $('stop').onclick=()=>{ if(sheetOpen) closeSheet(); stopScan(); };
@@ -667,6 +683,15 @@ body.camOn{overflow:hidden}
     setTimeout(()=>URL.revokeObjectURL(url),2000);
   };
 
+  document.body.appendChild($('cam'));
+  function setZoom(z){
+    document.documentElement.style.setProperty('--z', z);
+    document.querySelectorAll('#zoomctl button').forEach(b=>b.setAttribute('aria-pressed', b.dataset.z===String(z)));
+    try{ localStorage.setItem('slipZoom', z); }catch(_){}
+  }
+  let z0='1.3'; try{ z0=localStorage.getItem('slipZoom')||'1.3'; }catch(_){}
+  setZoom(z0);
+  $('zoomctl').onclick=e=>{ const b=e.target.closest('[data-z]'); if(b) setZoom(b.dataset.z); };
   init();
   if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{})); }
   let deferred=null;
