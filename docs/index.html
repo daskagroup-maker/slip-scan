@@ -95,6 +95,31 @@ input[type=date],input[type=month]{flex:1;min-width:0;padding:8px 10px;border:1p
 .zoomctl{display:flex;align-items:center;gap:4px}
 .zoomctl button{min-width:40px;padding:6px 8px!important}
 .zoomctl button[aria-pressed=true]{background:var(--ink)!important;color:var(--paper);border-color:var(--ink)!important}
+/* sticker color */
+.ctarget{position:absolute;left:50%;top:50%;width:84px;height:84px;margin:-42px 0 0 -42px;border-radius:50%;border:4px solid #fff;box-shadow:0 0 0 3px rgba(0,0,0,.5),inset 0 0 0 3px rgba(0,0,0,.5);z-index:2;pointer-events:none}
+.ctarget::after{content:"";position:absolute;left:50%;top:50%;width:8px;height:8px;margin:-4px;border-radius:50%;background:#fff}
+.cbar{position:absolute;left:0;right:0;bottom:calc(56px + env(safe-area-inset-bottom,0px));z-index:3;display:flex;justify-content:center;pointer-events:none}
+.cbar-in{pointer-events:auto;background:rgba(20,25,35,.9);color:#fff;border-radius:14px;padding:10px 12px;display:flex;align-items:center;gap:10px;max-width:92vw}
+.cbar-in .sw{width:34px;height:34px;border-radius:50%;border:2px solid #fff;flex:none}
+.cbar-in .lb{font-weight:700;min-width:7em}
+.cbar-in button{border:0;border-radius:10px;padding:10px 14px;font-weight:700}
+.cbar-in .go{background:var(--ok);color:#fff}
+.cbar-in .sk{background:rgba(255,255,255,.18);color:#fff}
+.cchips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 10px}
+.cchip{display:flex;flex-direction:column;align-items:center;gap:2px;border:2px solid var(--line);background:var(--card);border-radius:10px;padding:6px 8px;min-width:44px;font-size:15px}
+.cchip i{display:block;width:26px;height:26px;border-radius:50%;border:1px solid rgba(0,0,0,.25)}
+.cchip i.none{background:repeating-linear-gradient(45deg,var(--line) 0 4px,transparent 4px 8px)}
+.cchip[aria-pressed=true]{border-color:var(--ink);box-shadow:0 0 0 2px var(--ink)}
+.cpanel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin:0 0 12px}
+.crow{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--line)}
+.crow:last-of-type{border-bottom:0}
+.crow i{width:30px;height:30px;border-radius:50%;border:1px solid rgba(0,0,0,.25);flex:none}
+.crow i.none{background:repeating-linear-gradient(45deg,var(--line) 0 4px,transparent 4px 8px)}
+.crow b{flex:1}
+.crow button,.cpanel .bigbtn{border:1px solid var(--line);background:var(--card);border-radius:8px;padding:6px 12px}
+.cpanel .bigbtn{width:100%;margin-top:8px;padding:11px;background:var(--carbon);color:var(--onc);border:0;font-weight:700}
+.cpanel input[type=number]{width:70px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--card);font-size:16px}
+.sheet .auto{color:var(--ok);font-weight:700}
 /* full-screen camera */
 .cam{position:fixed;inset:0;background:#000;z-index:15;display:none;flex-direction:column}
 .cam.on{display:flex}
@@ -217,6 +242,15 @@ body.camOn{overflow:hidden}
     <div class="meta">箱子尺寸</div>
     <div class="sizes" id="sizeBar"></div>
     <label class="check"><input type="checkbox" id="askEach" checked> 每掃一張就選日期和尺寸</label>
+    <button class="linkbtn" id="cOpen" style="margin:0 0 10px">🎨 貼紙顏色設定</button>
+    <div class="cpanel" id="cPanel" hidden>
+      <div class="meta" style="margin-bottom:6px">貼紙顏色＝訂貨日的星期。先把 7 種貼紙各校正一次（用平常包貨的燈光）。</div>
+      <div id="cRows"></div>
+      <button class="bigbtn" id="cAll">從週一開始依序校正</button>
+      <label class="check" style="margin:12px 0 6px"><input type="checkbox" id="cAuto" checked> 掃完條碼後，自動辨識貼紙顏色</label>
+      <div class="row" style="font-size:15px">出貨日 = 訂貨日 + <input type="number" id="cOff" min="0" max="30" inputmode="numeric" placeholder="—"> 天</div>
+      <div class="meta">空白＝出貨日自己選</div>
+    </div>
   </div>
 
   <button class="scanbtn" id="scan">
@@ -234,6 +268,8 @@ body.camOn{overflow:hidden}
       <div class="toast" id="toastBox"><div class="toastin" id="toast" aria-live="assertive"></div></div>
       <div class="camhint"><span id="camHint">把條碼放進框內</span></div>
       <div class="camlook" id="camLook"></div>
+      <div class="ctarget" id="cTarget" hidden></div>
+      <div class="cbar" id="cBar" hidden><div class="cbar-in"><span class="sw" id="cSw"></span><span class="lb" id="cLb"></span><button class="go" id="cGo">取色</button><button class="sk" id="cSk">跳過</button></div></div>
     </div>
   </div>
   <span id="lookHome" hidden></span><div class="lookup" id="lookup" role="status" aria-live="assertive"></div>
@@ -289,7 +325,9 @@ body.camOn{overflow:hidden}
   <div class="meta">剛掃到</div>
   <div class="code" id="shCode"></div>
   <div class="meta" id="shWarn" style="color:var(--stamp)"></div>
-  <div class="meta" style="margin-top:10px">出貨日</div>
+  <div class="meta" style="margin-top:10px">訂貨日（貼紙）<span class="auto" id="shAuto"></span></div>
+  <div class="cchips" id="shColors"></div>
+  <div class="meta">出貨日</div>
   <div class="row" style="margin-top:4px"><input type="date" id="shDate"></div>
   <div class="qd" id="shQuick"></div>
   <div class="meta">點尺寸就儲存</div>
@@ -327,7 +365,7 @@ body.camOn{overflow:hidden}
   function saveLocal(){ try{ localStorage.setItem('slipDays', JSON.stringify(days)); localStorage.setItem('slipSizes', JSON.stringify(sizes)); }catch(e){} }
 
   const ROOT='slipScan';
-  const clean=items=>items.map(i=>({id:i.id, code:i.code, size:i.size||'', note:i.note||'', t:i.t||''}));
+  const clean=items=>items.map(i=>({id:i.id, code:i.code, size:i.size||'', order:i.order||'', note:i.note||'', t:i.t||''}));
   async function persist(date){
     saveLocal();
     if(mode!=='db') return;
@@ -364,6 +402,12 @@ body.camOn{overflow:hidden}
       }
       days=next; saveLocal(); render();
     }, e=>{ say('雲端讀取失敗：'+(e.code||e.message)+'（請檢查資料庫規則）','warn'); mode='local'; setSync(); });
+    rtdb.ref(ROOT+'/colors').on('value',s=>{
+      const v=s.val(); if(v && typeof v==='object'){ let changed=false;
+        Object.keys(v).forEach(k=>{ if(!colors[k]){ colors[k]=v[k]; changed=true; } });
+        if(changed){ try{ localStorage.setItem('slipColors', JSON.stringify(colors)); }catch(_){} renderColors(); } }
+    }, ()=>{});
+    rtdb.ref(ROOT+'/shipOffset').on('value',s=>{ const v=s.val(); if(v!==null && v!==undefined && document.activeElement!==$('cOff')){ $('cOff').value=v; try{localStorage.setItem('slipOff',v);}catch(_){} } }, ()=>{});
     rtdb.ref(ROOT+'/sizes').on('value',s=>{
       const v=s.val(); const list=Array.isArray(v)?v:(v?Object.values(v):null);
       if(list&&list.length){ sizes=list.map(String); if(!sizes.includes(curSize)) curSize=sizes[0]; saveLocal(); render(); }
@@ -387,15 +431,15 @@ body.camOn{overflow:hidden}
   }
   function camInfo(){
     if(!camOn()) return;
-    $('camInfo').innerHTML = appMode==='look' ? '<b>包貨查詢</b><br>掃描後顯示出貨日和尺寸'
+    $('camInfo').innerHTML = camPurpose==='calib' ? '<b>貼紙顏色校正</b><br>依序掃 7 種貼紙' : appMode==='look' ? '<b>包貨查詢</b><br>掃描後顯示出貨日和尺寸'
       : '<b>登記傳票</b><br>'+($('askEach').checked ? '掃到後選日期和尺寸' : md(current)+'・<span class="badge" style="--c:'+sizeColor(curSize)+'">'+esc(curSize)+'</span>');
     $('camN').textContent=sessionN;
   }
-  async function addItem(code, date, size){
+  async function addItem(code, date, size, order){
     if(findCode(code).some(h=>h.date===date)){ say('「'+code+'」在 '+md(date)+' 已經登記過了','warn'); camToast('已經登記過', esc(code)+'<br>'+md(date), true); buzz([60,60,60]); return; }
     const d = days[date] || (days[date]={date, items:[]});
     const t = new Date();
-    const item = {id:Date.now().toString(36)+Math.random().toString(36).slice(2,6), code, size, note:'', t:pad(t.getHours())+':'+pad(t.getMinutes())};
+    const item = {id:Date.now().toString(36)+Math.random().toString(36).slice(2,6), code, size, order:order||'', note:'', t:pad(t.getHours())+':'+pad(t.getMinutes())};
     d.items.unshift(item);
     freshId = item.id; buzz(80);
     say('已登記 '+code+' → '+md(date)+'・'+sizeLbl(size),'ok');
@@ -434,8 +478,8 @@ body.camOn{overflow:hidden}
     if(sheetOpen) return;
     lastCode=code; lastAt=now;
     if(appMode==='look'){ showLookup(code); return; }
-    if($('askEach').checked){ openSheet(code); }
-    else addItem(code, current, curSize);
+    if(camOn() && camPurpose==='scan' && colorReady()){ startColorStep(code); return; }
+    afterColor(code, '');
   }
 
   function showLookup(code){
@@ -455,14 +499,20 @@ body.camOn{overflow:hidden}
     buzz(80); if(camOn()){ sessionN++; camInfo(); const c=$('cam'); c.classList.remove('hit','bad'); void c.offsetWidth; c.classList.add('hit'); setTimeout(()=>c.classList.remove('hit'),800); }
   }
 
-  function openSheet(code){
-    pending={code, date:current};
+  function afterColor(code, order, auto){
+    if($('askEach').checked){ openSheet(code, order, auto); return; }
+    const d = order && shipOff()!==null ? addDays(order, shipOff()) : current;
+    addItem(code, d, curSize, order);
+  }
+  function openSheet(code, order, auto){
+    pending={code, date: order && shipOff()!==null ? addDays(order, shipOff()) : current, order:order||''};
+    $('shAuto').textContent = auto ? '　自動判斷：'+wdName(parse(order).getDay()) : '';
     sheetOpen=true; buzz(80);
     if(camOn()){ const c=$('cam'); c.classList.remove('hit','bad'); void c.offsetWidth; c.classList.add('hit'); setTimeout(()=>c.classList.remove('hit'),800); }
     $('shCode').textContent=code;
     const hits=findCode(code);
     $('shWarn').textContent = hits.length ? '已登記在：'+hits.map(h=>md(h.date)+' '+sizeLbl(h.item.size)).join('、') : '';
-    $('shDate').value=current;
+    $('shDate').value=pending.date;
     renderSheet();
     $('sheet').classList.add('on');
     setTimeout(()=>{ const b=$('shSizes').querySelector('[aria-pressed=true]')||$('shSizes').querySelector('button'); b&&b.focus(); },50);
@@ -475,6 +525,8 @@ body.camOn{overflow:hidden}
     set.add(pending.date);
     const arr=[...set].sort();
     $('shQuick').innerHTML=arr.map(d=>'<button data-qd="'+d+'" aria-pressed="'+(d===pending.date)+'">'+(d===TODAY?'今天 ':'')+md(d)+'</button>').join('');
+    const od = pending.order ? parse(pending.order).getDay() : -1;
+    $('shColors').innerHTML = WD_ORDER.map(w=>'<button class="cchip" data-cw="'+w+'" aria-pressed="'+(w===od)+'">'+swatch(w)+WD[w]+'</button>').join('');
     $('shSizes').innerHTML=sizes.map(s=>'<button class="sz" data-shs="'+esc(s)+'" style="--c:'+sizeColor(s)+'" aria-pressed="'+(s===curSize)+'">'+esc(s)+'</button>').join('');
     const q=$('shQuick').querySelector('[aria-pressed=true]'); q&&q.scrollIntoView({inline:'center',block:'nearest'});
   }
@@ -494,7 +546,7 @@ body.camOn{overflow:hidden}
   function slipHTML(it,date,search){
     const c=sizeColor(it.size);
     let h='<li class="slip'+(it.id===freshId?' flash':'')+'" style="--c:'+c+'" data-date="'+date+'" data-id="'+it.id+'">'+
-      '<div><div class="code">'+esc(it.code)+'</div><div class="meta">'+(search?md(date)+'　':'')+'<span class="badge" style="--c:'+c+'">'+esc(sizeLbl(it.size))+'</span>　'+esc(it.t||'')+'</div></div>';
+      '<div><div class="code">'+esc(it.code)+'</div><div class="meta">'+(search?md(date)+'　':'')+'<span class="badge" style="--c:'+c+'">'+esc(sizeLbl(it.size))+'</span>'+(it.order?'　訂 '+md(it.order):'')+'　'+esc(it.t||'')+'</div></div>';
     if(search){
       h+='<button class="jump" data-act="jump">看當天</button>'+(it.note?'<div class="full meta">'+esc(it.note)+'</div>':'');
     } else {
@@ -607,11 +659,16 @@ body.camOn{overflow:hidden}
       if(!list.length){ say('至少要有一個尺寸','warn'); return; }
       sizes=list; if(!sizes.includes(curSize)) curSize=sizes[0]; render(); persistSizes(); return;
     }
+    const cw=t.closest('[data-cw]'); if(cw && pending){
+      const o=lastWeekday(+cw.dataset.cw); pending.order=o; $('shAuto').textContent='';
+      if(shipOff()!==null){ pending.date=addDays(o,shipOff()); $('shDate').value=pending.date; }
+      renderSheet(); return;
+    }
     const qd=t.closest('[data-qd]'); if(qd){ pending.date=qd.dataset.qd; $('shDate').value=pending.date; renderSheet(); return; }
     const shs=t.closest('[data-shs]'); if(shs && pending){
       const p=pending; curSize=shs.dataset.shs; try{localStorage.setItem('slipCurSize',curSize);}catch(_){ }
       current=p.date; month=p.date.slice(0,7);
-      closeSheet(); showTab('day'); addItem(p.code,p.date,curSize); return;
+      closeSheet(); showTab('day'); addItem(p.code,p.date,curSize,p.order); return;
     }
     const cell=t.closest('[data-cell]'); if(cell){ const [d,s]=cell.dataset.cell.split('|'); cellSel={date:d,size:s}; renderMonth(); $('cell').scrollIntoView({block:'nearest'}); return; }
     const b=t.closest('[data-act]'); if(!b) return;
@@ -635,15 +692,125 @@ body.camOn{overflow:hidden}
   document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&sheetOpen){ closeSheet(); } });
 
   /* ---------- camera ---------- */
-  let scanner=null, candCode='', candAt=0;
+  let scanner=null, candCode='', candAt=0, camPurpose='scan';
+
+  /* ---------- sticker colour ---------- */
+  const WD_ORDER=[1,2,3,4,5,6,0];
+  const wdName=w=>'週'+WD[w];
+  let colors={}, colorStep=null, calibWd=null, cTimer=null;
+  try{ colors=JSON.parse(localStorage.getItem('slipColors')||'{}'); }catch(_){ colors={}; }
+  try{ const o=localStorage.getItem('slipOff'); if(o!==null) $('cOff').value=o; const a=localStorage.getItem('slipCAuto'); if(a!==null) $('cAuto').checked=a==='1'; }catch(_){}
+  const shipOff=()=>{ const v=$('cOff').value.trim(); return v===''||isNaN(+v) ? null : Math.max(0,Math.min(30,Math.round(+v))); };
+  const addDays=(d,n)=>{ const x=parse(d); x.setDate(x.getDate()+n); return ymd(x); };
+  const lastWeekday=w=>{ const x=new Date(); while(x.getDay()!==w) x.setDate(x.getDate()-1); return ymd(x); };
+  const calibrated=()=>WD_ORDER.filter(w=>colors[w]).length;
+  const colorReady=()=>$('cAuto').checked && calibrated()>=2;
+  const swatch=w=>colors[w] ? '<i style="background:rgb('+colors[w].rgb.join(',')+')"></i>' : '<i class="none"></i>';
+
+  function rgb2lab(r,g,b){
+    [r,g,b]=[r,g,b].map(v=>{ v/=255; return v>0.04045?Math.pow((v+0.055)/1.055,2.4):v/12.92; });
+    let x=(r*0.4124+g*0.3576+b*0.1805)/0.95047, y=r*0.2126+g*0.7152+b*0.0722, z=(r*0.0193+g*0.1192+b*0.9505)/1.08883;
+    [x,y,z]=[x,y,z].map(v=>v>0.008856?Math.cbrt(v):7.787*v+16/116);
+    return [116*y-16, 500*(x-y), 200*(y-z)];
+  }
+  const cv=document.createElement('canvas'); cv.width=cv.height=24; const cx=cv.getContext('2d',{willReadFrequently:true});
+  function sample(){
+    const v=$('reader').querySelector('video'); if(!v||!v.videoWidth) return null;
+    const disp=v.getBoundingClientRect(); if(!disp.width) return null;
+    const side=Math.max(8, 60*(v.videoWidth/disp.width));
+    cx.drawImage(v, v.videoWidth/2-side/2, v.videoHeight/2-side/2, side, side, 0,0,24,24);
+    const px=cx.getImageData(0,0,24,24).data; const rs=[],gs=[],bs=[];
+    for(let i=0;i<px.length;i+=4){ rs.push(px[i]); gs.push(px[i+1]); bs.push(px[i+2]); }
+    const med=a=>{ a.sort((x,y)=>x-y); return a[a.length>>1]; };
+    const rgb=[med(rs),med(gs),med(bs)];
+    return {rgb, lab:rgb2lab(...rgb)};
+  }
+  function classify(lab){
+    const ds=WD_ORDER.filter(w=>colors[w]).map(w=>{ const c=colors[w].lab; return {w, d:Math.hypot((lab[0]-c[0])*0.5, lab[1]-c[1], lab[2]-c[2])}; }).sort((a,b)=>a.d-b.d);
+    if(!ds.length) return null;
+    const best=ds[0], second=ds[1]||{d:999};
+    return {w:best.w, ok: best.d<32 && second.d-best.d>6};
+  }
+  function showColorUI(label, btn){
+    $('cTarget').hidden=false; $('cBar').hidden=false; $('cLb').textContent=label;
+    $('cGo').hidden=!btn; $('cGo').textContent=btn||'';
+  }
+  function endColorUI(){ clearInterval(cTimer); cTimer=null; $('cTarget').hidden=true; $('cBar').hidden=true; $('camHint').textContent='把條碼放進框內'; }
+
+  function startColorStep(code){
+    colorStep={code, last:-1, n:0, t0:Date.now()};
+    $('camHint').textContent='把日期貼紙對準圓圈';
+    showColorUI('找貼紙中…', '');
+    $('cSk').textContent='跳過';
+    cTimer=setInterval(()=>{
+      const sm=sample(); if(!sm||!colorStep) return;
+      $('cSw').style.background='rgb('+sm.rgb.join(',')+')';
+      const r=classify(sm.lab);
+      if(r&&r.ok){
+        $('cLb').textContent=wdName(r.w)+'？';
+        if(r.w===colorStep.last) colorStep.n++; else { colorStep.last=r.w; colorStep.n=1; }
+        if(colorStep.n>=4){
+          const c=colorStep.code, o=lastWeekday(r.w); colorStep=null; endColorUI(); buzz(80);
+          camToast('🎨 '+wdName(r.w)+' 訂貨', md(o)); afterColor(c, o, true);
+        }
+      } else { $('cLb').textContent='認不出顏色'; colorStep.n=0; colorStep.last=-1; }
+    }, 140);
+  }
+  $('cSk').onclick=()=>{
+    if(colorStep){ const c=colorStep.code; colorStep=null; endColorUI(); afterColor(c,''); }
+    else if(calibWd!==null){ nextCalib(); }
+  };
+
+  /* calibration */
+  function beginCalib(){
+    if(calibWd===null) calibWd=1;
+    $('camHint').textContent='把貼紙放滿圓圈，再按「取色」';
+    showColorUI('校正 '+wdName(calibWd), '取色'); $('cSk').textContent='下一個';
+    clearInterval(cTimer);
+    cTimer=setInterval(()=>{ const sm=sample(); if(sm) $('cSw').style.background='rgb('+sm.rgb.join(',')+')'; }, 150);
+  }
+  function nextCalib(){
+    const i=WD_ORDER.indexOf(calibWd);
+    if(i===WD_ORDER.length-1 || calibAll===false){ calibWd=null; endColorUI(); stopScan(); renderColors(); return; }
+    calibWd=WD_ORDER[i+1]; beginCalib();
+  }
+  let calibAll=false;
+  $('cGo').onclick=async()=>{
+    if(calibWd===null) return;
+    const acc=[];
+    for(let k=0;k<6;k++){ const sm=sample(); if(sm) acc.push(sm.rgb); await new Promise(r=>setTimeout(r,80)); }
+    if(!acc.length){ camToast('取色失敗','請再試一次',true); return; }
+    const rgb=[0,1,2].map(j=>Math.round(acc.reduce((a,c)=>a+c[j],0)/acc.length));
+    colors[calibWd]={rgb, lab:rgb2lab(...rgb)};
+    saveColors(); camToast('✓ '+wdName(calibWd)+' 已記住','<span style="display:inline-block;width:22px;height:22px;border-radius:50%;vertical-align:middle;background:rgb('+rgb.join(',')+')"></span>'); buzz(60);
+    nextCalib();
+  };
+  function saveColors(){
+    try{ localStorage.setItem('slipColors', JSON.stringify(colors)); }catch(_){}
+    if(mode==='db' && rtdb) rtdb.ref(ROOT+'/colors').set(colors).catch(()=>{});
+    renderColors();
+  }
+  function renderColors(){
+    $('cRows').innerHTML=WD_ORDER.map(w=>'<div class="crow">'+swatch(w)+'<b>'+wdName(w)+'</b><button data-cal="'+w+'">'+(colors[w]?'重新校正':'校正')+'</button></div>').join('');
+    $('cOpen').textContent='🎨 貼紙顏色設定（已校正 '+calibrated()+'/7）';
+  }
+  $('cOpen').onclick=()=>{ $('cPanel').hidden=!$('cPanel').hidden; renderColors(); };
+  $('cAll').onclick=()=>{ calibAll=true; calibWd=1; startCamera('calib'); };
+  $('cRows').onclick=e=>{ const b=e.target.closest('[data-cal]'); if(!b) return; calibAll=false; calibWd=+b.dataset.cal; startCamera('calib'); };
+  $('cAuto').onchange=()=>{ try{ localStorage.setItem('slipCAuto', $('cAuto').checked?'1':'0'); }catch(_){} };
+  $('cOff').onchange=()=>{ try{ localStorage.setItem('slipOff', $('cOff').value.trim()); }catch(_){}
+    if(mode==='db' && rtdb) rtdb.ref(ROOT+'/shipOffset').set($('cOff').value.trim()).catch(()=>{}); };
+  renderColors();
   function confirmRead(text){
     const now=Date.now();
     if(text===candCode && now-candAt<1500){ candCode=''; onCode(text); }
     else { candCode=text; candAt=now; }
   }
-  $('scan').onclick=async()=>{
+  $('scan').onclick=()=>startCamera('scan');
+  async function startCamera(purpose){
+    camPurpose=purpose;
     if(typeof Html5Qrcode==='undefined'){ say('掃描元件載入失敗，請改用拍照或手動輸入','warn'); return; }
-    if(scanner) return;
+    if(scanner){ if(purpose==='calib') beginCalib(); camInfo(); return; }
     sessionN=0; $('cam').classList.add('on'); document.body.classList.add('camOn'); $('lookup').classList.remove('on'); $('camLook').appendChild($('lookup')); camInfo();
     const F=Html5QrcodeSupportedFormats;
     scanner=new Html5Qrcode('reader',{verbose:false,experimentalFeatures:{useBarCodeDetectorIfSupported:true},
@@ -651,16 +818,18 @@ body.camOn{overflow:hidden}
     try{
       await scanner.start({facingMode:'environment'},
         {fps:12,qrbox:(w,h)=>({width:Math.floor(w*0.86),height:Math.floor(Math.min(h*0.35,w*0.42))})},
-        text=>confirmRead(text),()=>{});
+        text=>{ if(camPurpose==='scan' && !colorStep) confirmRead(text); },()=>{});
       $('camHint').textContent='把條碼放進框內';
+      if(purpose==='calib') beginCalib();
     }catch(err){ await stopScan(); say('無法開啟相機（可能沒有授權）。請改用「拍照辨識」或手動輸入。','warn'); }
-  };
+  }
   async function stopScan(){
     if(scanner){ try{await scanner.stop();}catch(e){} try{scanner.clear();}catch(e){} }
+    endColorUI(); colorStep=null; calibWd=null;
     scanner=null; $('cam').classList.remove('on'); document.body.classList.remove('camOn'); $('lookup').classList.remove('on'); $('lookHome').after($('lookup'));
     if(sessionN) say('這次掃了 '+sessionN+' 張','ok');
   }
-  $('stop').onclick=()=>{ if(sheetOpen) closeSheet(); stopScan(); };
+  $('stop').onclick=()=>{ if(sheetOpen) closeSheet(); calibAll=false; stopScan(); };
   $('photoBtn').onclick=()=>$('photo').click();
   $('photo').onchange=async e=>{
     const f=e.target.files&&e.target.files[0]; e.target.value=''; if(!f) return;
@@ -674,8 +843,8 @@ body.camOn{overflow:hidden}
 
   /* ---------- CSV ---------- */
   $('csv').onclick=async()=>{
-    const rows=[['出貨日','箱子尺寸','條碼','備註','登記時間']];
-    Object.keys(days).sort().forEach(d=>days[d].items.slice().reverse().forEach(i=>rows.push([d,sizeLbl(i.size),i.code,i.note||'',i.t||''])));
+    const rows=[['出貨日','箱子尺寸','訂貨日','條碼','備註','登記時間']];
+    Object.keys(days).sort().forEach(d=>days[d].items.slice().reverse().forEach(i=>rows.push([d,sizeLbl(i.size),i.order||'',i.code,i.note||'',i.t||''])));
     if(rows.length===1){ say('還沒有資料可以匯出'); return; }
     const csv='\ufeff'+rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\r\n');
     const url=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
