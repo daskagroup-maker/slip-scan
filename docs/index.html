@@ -19,6 +19,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="config.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
 <style>
 :root{
   --paper:#F1F3F5; --card:#FFFFFF; --ink:#1D2A44; --ink2:#5B6679; --line:#D6DBE2;
@@ -124,6 +125,9 @@ input[type=date],input[type=month]{flex:1;min-width:0;padding:8px 10px;border:1p
 .cpanel .bigbtn{width:100%;margin-top:8px;padding:11px;background:var(--carbon);color:var(--onc);border:0;font-weight:700}
 .cpanel input[type=number]{width:70px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--card);font-size:16px}
 .sheet .auto{color:var(--ok);font-weight:700}
+.shsum{font-size:17px;font-weight:700;margin-top:2px}
+.shsum .src{font-size:13px;font-weight:500;color:var(--ink2);margin-left:6px}
+.shsum .run{color:var(--carbon)}
 /* full-screen camera */
 .cam{position:fixed;inset:0;background:#000;z-index:15;display:none;flex-direction:column}
 .cam.on{display:flex}
@@ -288,6 +292,7 @@ body.camOn{overflow:hidden}
     <div class="meta">箱子尺寸</div>
     <div class="sizes" id="sizeBar"></div>
     <label class="check"><input type="checkbox" id="askEach" checked> 每掃一張就選日期和尺寸</label>
+    <label class="check"><input type="checkbox" id="ocrDate" checked> 自動讀取傳票上的「発送日」當出貨日</label>
     <label class="check"><input type="checkbox" id="onlyTrack" checked> 只讀追蹤號碼（お問合せNo 12 碼），忽略傳票上其他條碼</label>
     <button class="linkbtn" id="cOpen" style="margin:0 0 10px">🎨 貼紙顏色設定</button>
     <div class="cpanel" id="cPanel" hidden>
@@ -377,6 +382,7 @@ body.camOn{overflow:hidden}
 <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="shCode"><div class="sheetin">
   <div class="meta">剛掃到</div>
   <div class="code" id="shCode"></div>
+  <div class="shsum" id="shSum"></div>
   <div class="meta" id="shWarn" style="color:var(--stamp)"></div>
   <div class="meta" style="margin-top:8px">點尺寸就儲存</div>
   <div class="sizes" id="shSizes"></div>
@@ -482,6 +488,79 @@ body.camOn{overflow:hidden}
     $('toastBox').classList.add('on'); const c=$('cam'); c.classList.remove('hit','bad'); void c.offsetWidth; c.classList.add(bad?'bad':'hit');
     clearTimeout(toastT); toastT=setTimeout(()=>{ $('toastBox').classList.remove('on'); c.classList.remove('hit','bad'); }, 1600);
   }
+  /* ---------- 傳票発送日 OCR ---------- */
+  const ocrJobs={}, savedSrc={}; let ocrWorker=null, ocrLoading=null, ocrSource=null;
+  const ocrOn=()=>$('ocrDate').checked && !!window.Tesseract;
+  function ocrWarm(){
+    if(!ocrOn() || ocrLoading) return ocrLoading;
+    ocrLoading = Tesseract.createWorker('jpn', 1, {logger:()=>{}}).then(async w=>{
+      await w.setParameters({tessedit_pageseg_mode:'11'}); ocrWorker=w; return w;
+    }).catch(e=>{ ocrLoading=null; throw e; });
+    return ocrLoading;
+  }
+  function grabFrame(){
+    const v=$('reader').querySelector('video'); if(!v||!v.videoWidth) return null;
+    const c=document.createElement('canvas'); c.width=v.videoWidth; c.height=v.videoHeight;
+    const g=c.getContext('2d'); g.drawImage(v,0,0);
+    // grayscale + contrast
+    const im=g.getImageData(0,0,c.width,c.height), d=im.data;
+    for(let i=0;i<d.length;i+=4){ let y=0.299*d[i]+0.587*d[i+1]+0.114*d[i+2]; y=Math.max(0,Math.min(255,(y-128)*1.5+128)); d[i]=d[i+1]=d[i+2]=y; }
+    g.putImageData(im,0,0); return c;
+  }
+  function pickDate(text){
+    const t=String(text||'').replace(/\s+/g,'').replace(/[Oo]/g,'0').replace(/[Il|]/g,'1');
+    const re=/(20\d{2})[年\/.\-]?(\d{1,2})[月\/.\-]?(\d{1,2})日?/g; let m; const sc={};
+    const now=new Date();
+    while((m=re.exec(t))){
+      const before=t.slice(Math.max(0,m.index-6), m.index);
+      if(/期限|有効|有劾|期艮/.test(before)) continue;            // 送り状有効期限 を除外
+      const y=+m[1], mo=+m[2], da=+m[3]; if(mo<1||mo>12||da<1||da>31) continue;
+      const dt=new Date(y,mo-1,da); if(dt.getMonth()!==mo-1) continue;
+      if(Math.abs(dt-now) > 400*864e5) continue;
+      const k=ymd(dt);
+      sc[k]=(sc[k]||0) + 1 + (/送|発[送达]/.test(before) && !/行/.test(before) ? 3 : 0);   // 「発送日」優先
+    }
+    const ks=Object.keys(sc); if(!ks.length) return null;
+    ks.sort((a,b)=>sc[b]-sc[a] || (a<b?-1:1));                    // 分數高、同分取最早（有効期限較晚）
+    return ks[0];
+  }
+  async function ocrStart(code){
+    if(!ocrOn() || ocrJobs[code]) return;
+    const src = ocrSource || grabFrame(); if(!src) return;
+    ocrJobs[code]={status:'run'}; renderSum();
+    try{
+      const w = ocrWorker || await ocrWarm();
+      const {data} = await w.recognize(src);
+      const d = pickDate(data.text);
+      ocrJobs[code] = d ? {status:'ok', date:d} : {status:'fail'};
+    }catch(e){ ocrJobs[code]={status:'fail', err:String(e&&e.message||e)}; }
+    applyOcr(code);
+  }
+  function applyOcr(code){
+    const j=ocrJobs[code]; if(!j) return;
+    if(pending && pending.code===code){
+      if(j.status==='ok' && pending.src!=='manual'){ pending.date=j.date; pending.src='ocr'; $('shDate').value=j.date; renderSheet(); }
+      renderSum(); return;
+    }
+    const sv=savedSrc[code];
+    if(j.status==='ok' && sv && sv.src!=='manual' && sv.date!==j.date){
+      const it=days[sv.date] && days[sv.date].items.find(i=>i.code===code);
+      if(it){ sv.date=j.date; sv.src='ocr'; moveItem(Object.keys(days).find(d=>days[d].items.includes(it)), it.id, j.date);
+        const r=sessionList.find(x=>x.code===code); if(r){ r.date=j.date; renderRecent(); }
+        camToast('📄 依傳票改為 '+md(j.date), esc(fmtCode(code))); }
+    }
+  }
+  function renderSum(){
+    if(!pending) return;
+    const j=ocrJobs[pending.code];
+    const srcTxt={ocr:'📄 傳票発送日', color:'🎨 貼紙＋'+(shipOff()||0)+'天', manual:'✋ 手動', default:'預設'}[pending.src]||'';
+    let extra='';
+    if(pending.src!=='ocr' && j){ extra = j.status==='run' ? '<span class="src run">📄 讀取傳票日期中…</span>' : j.status==='fail' ? '<span class="src">📄 讀不到傳票日期</span>' : ''; }
+    $('shSum').innerHTML='出貨日 '+md(pending.date)+'<span class="src">'+srcTxt+'</span>'+extra;
+  }
+  try{ const v=localStorage.getItem('slipOcr'); if(v!==null) $('ocrDate').checked=v==='1'; }catch(_){}
+  $('ocrDate').onchange=()=>{ try{ localStorage.setItem('slipOcr',$('ocrDate').checked?'1':'0'); }catch(_){} if($('ocrDate').checked) ocrWarm(); };
+
   let stage='scan', sessionList=[];
   function renderRecent(){
     $('recent').innerHTML = sessionList.length ? '<div class="hd">剛剛登記</div>'+sessionList.slice(0,6).map(x=>'<li><span class="badge" style="--c:'+sizeColor(x.size)+'">'+esc(sizeLbl(x.size))+'</span><span class="c">'+esc(fmtCode(x.code))+'</span><span class="d">'+md(x.date)+'</span></li>').join('') : '';
@@ -578,6 +657,7 @@ body.camOn{overflow:hidden}
     if(sheetOpen) return;
     lastCode=code; lastAt=now;
     if(appMode==='look'){ showLookup(code); return; }
+    if(appMode==='add' && !manual) ocrStart(code);
     if(camOn() && camPurpose==='scan' && colorReady()){ startColorStep(code); return; }
     afterColor(code, '');
   }
@@ -601,11 +681,14 @@ body.camOn{overflow:hidden}
 
   function afterColor(code, order, auto){
     if($('askEach').checked){ openSheet(code, order, auto); return; }
-    const d = order && shipOff()!==null ? addDays(order, shipOff()) : current;
+    let d = order && shipOff()!==null ? addDays(order, shipOff()) : current, src = order && shipOff()!==null ? 'color':'default';
+    const j=ocrJobs[code]; if(j && j.status==='ok'){ d=j.date; src='ocr'; }
+    savedSrc[code]={date:d, src};
     addItem(code, d, curSize, order);
   }
   function openSheet(code, order, auto){
-    pending={code, date: order && shipOff()!==null ? addDays(order, shipOff()) : current, order:order||''};
+    pending={code, date: order && shipOff()!==null ? addDays(order, shipOff()) : current, order:order||'', src: order && shipOff()!==null ? 'color':'default'};
+    const j=ocrJobs[code]; if(j && j.status==='ok'){ pending.date=j.date; pending.src='ocr'; }
     $('shAuto').textContent = auto ? '　自動判斷：'+wdName(parse(order).getDay()) : '';
     sheetOpen=true; buzz(80);
     if(camOn()){ const c=$('cam'); c.classList.remove('hit','bad'); void c.offsetWidth; c.classList.add('hit'); setTimeout(()=>c.classList.remove('hit'),800); }
@@ -613,7 +696,7 @@ body.camOn{overflow:hidden}
     const hits=findCode(code);
     $('shWarn').textContent = hits.length ? '已登記在：'+hits.map(h=>md(h.date)+' '+sizeLbl(h.item.size)).join('、') : '';
     $('shDate').value=pending.date;
-    renderSheet();
+    renderSheet(); renderSum();
     if(camOn()){ const r=$('cam').querySelector('.cambody').getBoundingClientRect(); $('sheet').style.setProperty('--sheetTop', Math.round(r.bottom)+'px'); $('sheet').classList.add('incam'); } else $('sheet').classList.remove('incam');
     $('sheet').classList.add('on'); setStage('size'); $('sheet').scrollTop=0;
     setTimeout(()=>{ const b=$('shSizes').querySelector('[aria-pressed=true]')||$('shSizes').querySelector('button'); b&&b.focus(); },50);
@@ -762,13 +845,14 @@ body.camOn{overflow:hidden}
     }
     const cw=t.closest('[data-cw]'); if(cw && pending){
       const o=lastWeekday(+cw.dataset.cw); pending.order=o; $('shAuto').textContent='';
-      if(shipOff()!==null){ pending.date=addDays(o,shipOff()); $('shDate').value=pending.date; }
-      renderSheet(); return;
+      if(shipOff()!==null && pending.src!=='ocr' && pending.src!=='manual'){ pending.date=addDays(o,shipOff()); pending.src='color'; $('shDate').value=pending.date; }
+      renderSheet(); renderSum(); return;
     }
-    const qd=t.closest('[data-qd]'); if(qd){ pending.date=qd.dataset.qd; $('shDate').value=pending.date; renderSheet(); return; }
+    const qd=t.closest('[data-qd]'); if(qd){ pending.date=qd.dataset.qd; pending.src='manual'; $('shDate').value=pending.date; renderSheet(); renderSum(); return; }
     const shs=t.closest('[data-shs]'); if(shs && pending){
       const p=pending; curSize=shs.dataset.shs; try{localStorage.setItem('slipCurSize',curSize);}catch(_){ }
       current=p.date; month=p.date.slice(0,7);
+      savedSrc[p.code]={date:p.date, src:p.src};
       closeSheet(); showTab('day'); addItem(p.code,p.date,curSize,p.order); return;
     }
     const cell=t.closest('[data-cell]'); if(cell){ const [d,s]=cell.dataset.cell.split('|'); cellSel={date:d,size:s}; renderMonth(); $('cell').scrollIntoView({block:'nearest'}); return; }
@@ -788,7 +872,7 @@ body.camOn{overflow:hidden}
     if(d.act==='move'){ const li=e.target.closest('.slip'); const to=e.target.value; moveItem(li.dataset.date,li.dataset.id,to); if(to) go(to); }
   });
   document.addEventListener('focusout',e=>{ if(e.target.dataset&&e.target.dataset.act==='note') setTimeout(render,0); });
-  $('shDate').onchange=e=>{ if(e.target.value){ pending.date=e.target.value; renderSheet(); } };
+  $('shDate').onchange=e=>{ if(e.target.value){ pending.date=e.target.value; pending.src='manual'; renderSheet(); renderSum(); } };
   $('shCancel').onclick=()=>{ closeSheet(); say('已略過'); };
   document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&sheetOpen){ closeSheet(); } });
 
@@ -920,8 +1004,9 @@ body.camOn{overflow:hidden}
     scanner=new Html5Qrcode('reader',{verbose:false,experimentalFeatures:{useBarCodeDetectorIfSupported:true},
       formatsToSupport:[F.CODABAR,F.CODE_128,F.CODE_39,F.ITF,F.EAN_13,F.EAN_8,F.QR_CODE]});
     try{
+      if(purpose==='scan') try{ ocrWarm(); }catch(_){}
       await scanner.start({facingMode:'environment'},
-        {fps:12,qrbox:(w,h)=>({width:Math.floor(w*0.86),height:Math.floor(Math.min(h*0.35,w*0.42))})},
+        {fps:12, videoConstraints:{facingMode:'environment', width:{ideal:1920}, height:{ideal:1080}},qrbox:(w,h)=>({width:Math.floor(w*0.86),height:Math.floor(Math.min(h*0.35,w*0.42))})},
         text=>{ if(camPurpose==='scan' && !colorStep) confirmRead(text); },()=>{});
       setTimeout(placeVF,300); setStage('scan');
       if(purpose==='calib') beginCalib();
@@ -940,7 +1025,9 @@ body.camOn{overflow:hidden}
     if(typeof Html5Qrcode==='undefined'){ say('辨識元件載入失敗，請手動輸入','warn'); return; }
     say('辨識中…');
     const r=new Html5Qrcode('tmpReader',{verbose:false});
-    try{ const text=await r.scanFile(f,false); lastCode=''; say(''); onCode(text); }
+    try{ const text=await r.scanFile(f,false); lastCode=''; say('');
+      try{ ocrSource=await createImageBitmap(f); }catch(_){ ocrSource=null; }
+      onCode(text); ocrSource=null; }
     catch(err){ say('照片裡找不到條碼，請靠近一點、避免反光再拍一次','warn'); }
     try{ r.clear(); }catch(_){}
   };
