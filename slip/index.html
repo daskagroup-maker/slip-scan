@@ -17,7 +17,7 @@
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script>
 /* ===== 貼上 DASKA 的 firebaseConfig（和庫存 app 用同一組即可）=====
    沒填的話會先存在手機本機，不會同步。 */
@@ -25,6 +25,7 @@ window.FIREBASE_CONFIG = {
   apiKey: "",
   authDomain: "daska-f4811.firebaseapp.com",
   projectId: "daska-f4811",
+  databaseURL: "https://daska-f4811-default-rtdb.asia-southeast1.firebasedatabase.app",
   storageBucket: "daska-f4811.appspot.com",
   messagingSenderId: "",
   appId: ""
@@ -288,57 +289,50 @@ input[type=date],input[type=month]{flex:1;min-width:0;padding:8px 10px;border:1p
   }
   function saveLocal(){ try{ localStorage.setItem('slipDays', JSON.stringify(days)); localStorage.setItem('slipSizes', JSON.stringify(sizes)); }catch(e){} }
 
-  const writing = {};
+  const ROOT='slipScan';
+  const clean=items=>items.map(i=>({id:i.id, code:i.code, size:i.size||'', note:i.note||'', t:i.t||''}));
   async function persist(date){
-    if(mode !== 'db'){ saveLocal(); return; }
-    while(writing[date]) await writing[date];
-    const p = (async()=>{
-      const doc = days[date];
-      const ref = db.collection(COL_DAYS).doc(date);
-      const run = ()=> (doc && doc.items.length) ? ref.set({date, items:doc.items}) : ref.delete();
-      try{ await run(); }
-      catch(e){
-        if(e && e.code==='unavailable'){ await new Promise(r=>setTimeout(r,500+Math.random()*800)); try{ await run(); }catch(_){ say('儲存失敗，請稍後再試','warn'); } }
-        
-        else say('儲存失敗：'+(e&&e.message||'未知錯誤'),'warn');
-      }
-    })();
-    writing[date]=p; await p; delete writing[date];
+    saveLocal();
+    if(mode!=='db') return;
+    const doc=days[date];
+    try{
+      await rtdb.ref(ROOT+'/days/'+date).set(doc&&doc.items.length ? {items:clean(doc.items)} : null);
+    }catch(e){ say('儲存失敗：'+(e.code||e.message)+'（請檢查資料庫規則）','warn'); }
   }
   async function persistSizes(){
-    if(mode!=='db'){ saveLocal(); return; }
-    try{ await db.collection(COL_CFG).doc('sizes').set({list:sizes}); }catch(e){ say('尺寸設定儲存失敗','warn'); }
+    saveLocal();
+    if(mode!=='db') return;
+    try{ await rtdb.ref(ROOT+'/sizes').set(sizes); }catch(e){ say('尺寸設定儲存失敗','warn'); }
   }
 
-  const COL_DAYS='slip_days', COL_CFG='slip_config';
+  let rtdb=null, online=false;
   async function init(){
     loadLocal(); render();
     const cfg=window.FIREBASE_CONFIG||{};
-    if(!window.firebase || !cfg.apiKey){ setSync(); return; }
+    if(!window.firebase || !cfg.apiKey || !cfg.databaseURL){ setSync(); return; }
     try{
       firebase.initializeApp(cfg);
-      const fs=firebase.firestore();
-      try{ await fs.enablePersistence({synchronizeTabs:true}); }catch(_){}
-      await firebase.auth().signInAnonymously();
-      db=fs; mode='db'; setSync(true);
+      try{ await firebase.auth().signInAnonymously(); }catch(_){ /* 規則不需登入時可略過 */ }
+      rtdb=firebase.database(); mode='db';
     }catch(e){ say('雲端連線失敗，先存在本機：'+(e.code||e.message),'warn'); setSync(); return; }
-    // migrate local data once
-    const localDays=Object.keys(days);
-    db.collection(COL_DAYS).onSnapshot({includeMetadataChanges:true}, snap=>{
-      const next={};
-      snap.docs.forEach(s=>{ const v=s.data(); if(v&&Array.isArray(v.items)) next[s.id]={date:s.id, items:v.items.map(i=>Object.assign({},i))}; });
-      if(localDays.length && !snap.metadata.fromCache){
-        const toPush=localDays.filter(d=>!next[d]); localDays.length=0;
-        if(toPush.length){ toPush.forEach(d=>{ next[d]=days[d]; }); days=next; toPush.forEach(d=>persist(d)); try{localStorage.removeItem('slipDays');}catch(_){ } say('已把本機的 '+toPush.length+' 天資料上傳雲端','ok'); }
+    rtdb.ref('.info/connected').on('value',s=>{ online=!!s.val(); setSync(); });
+    const localDays=Object.keys(days); let first=true;
+    rtdb.ref(ROOT+'/days').on('value',snap=>{
+      const v=snap.val()||{}, next={};
+      Object.keys(v).forEach(d=>{ const it=v[d]&&v[d].items; const arr=Array.isArray(it)?it:(it?Object.values(it):[]); if(arr.length) next[d]={date:d, items:arr.map(i=>Object.assign({},i))}; });
+      if(first){
+        first=false;
+        const toPush=localDays.filter(d=>!next[d]);
+        if(toPush.length){ toPush.forEach(d=>{ next[d]=days[d]; }); days=next; toPush.forEach(d=>persist(d)); say('已把本機的 '+toPush.length+' 天資料上傳雲端','ok'); }
       }
-      days=next; setSync(snap.metadata.fromCache); render();
-    }, e=>{ say('雲端讀取失敗：'+(e.code||e.message)+'（請檢查 Firestore 規則）','warn'); mode='local'; setSync(); });
-    db.collection(COL_CFG).doc('sizes').onSnapshot(s=>{
-      const v=s.exists&&s.data();
-      if(v&&Array.isArray(v.list)&&v.list.length){ sizes=v.list.slice(); if(!sizes.includes(curSize)) curSize=sizes[0]; render(); }
+      days=next; saveLocal(); render();
+    }, e=>{ say('雲端讀取失敗：'+(e.code||e.message)+'（請檢查資料庫規則）','warn'); mode='local'; setSync(); });
+    rtdb.ref(ROOT+'/sizes').on('value',s=>{
+      const v=s.val(); const list=Array.isArray(v)?v:(v?Object.values(v):null);
+      if(list&&list.length){ sizes=list.map(String); if(!sizes.includes(curSize)) curSize=sizes[0]; saveLocal(); render(); }
     }, ()=>{});
   }
-  function setSync(cached){ $('syncState').textContent = mode==='db' ? (cached?'離線中，連線後自動同步':'已同步雲端') : '儲存在這台裝置'; }
+  function setSync(cached){ $('syncState').textContent = mode==='db' ? (online?'已同步雲端':'離線中，連線後自動同步') : '儲存在這台裝置'; }
 
   /* ---------- data ops ---------- */
   function findCode(code){
