@@ -98,6 +98,31 @@ input[type=date],input[type=month]{flex:1;min-width:0;padding:8px 10px;border:1p
 .zoomctl button{min-width:40px;padding:6px 8px!important}
 .zoomctl button[aria-pressed=true]{background:var(--ink)!important;color:var(--paper);border-color:var(--ink)!important}
 .smode{margin:4px 0 10px}
+.period{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 10px;font-size:15px}
+.period input{padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--card);font-size:15px}
+.mfdate{width:100%;margin:0 0 6px;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--card);font-size:16px}
+.mapwrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--card);margin-top:6px}
+.map{border-collapse:separate;border-spacing:3px;width:100%;font-variant-numeric:tabular-nums;zoom:calc(1/var(--z))}
+.mapwrap .map{font-size:16px}
+.map th{font-size:14px;font-weight:700;padding:4px 2px;white-space:nowrap;line-height:1.2}
+.map th.wd{border-radius:8px;color:#222}
+.map th.rowh{text-align:left;padding:0 2px}
+.map th.rowh .badge{min-width:30px;font-size:12px;padding:1px 4px}
+.map td{padding:0}
+.map td button{width:100%;min-width:38px;height:50px;border-radius:8px;border:2px solid var(--line);background:var(--paper);font-size:18px;font-weight:900;position:relative}
+.map td button.empty{color:var(--line);font-weight:400;font-size:14px}
+.map td button.today{border-color:var(--stamp);box-shadow:inset 0 0 0 2px var(--stamp)}
+.map td button.late{background:var(--stamp);color:#fff;border-color:var(--stamp)}
+.map td button.sel{outline:3px solid var(--ink);outline-offset:1px}
+.map td button i{position:absolute;right:3px;top:2px;font-style:normal;font-size:11px;font-weight:700;color:var(--stamp)}
+.map td button.late i{color:#fff}
+.maplegend{display:flex;gap:14px;font-size:13px;color:var(--ink2);margin:8px 2px}
+.maplegend .lg{display:inline-block;width:14px;height:14px;border-radius:4px;vertical-align:-2px;margin-right:4px}
+.maplegend .lg.today{border:2px solid var(--stamp)}
+.maplegend .lg.late{background:var(--stamp)}
+.donebtn{border:1px solid var(--ok);color:var(--ok);background:none;border-radius:8px;padding:4px 10px;font-size:13px;font-weight:700}
+.slip.done{opacity:.55}
+.locbig{font-size:22px;font-weight:900;margin:6px 0;padding:6px 10px;border-radius:10px;display:inline-block}
 .smode button{font-size:15px}
 .bhint{font-size:14px;color:var(--ink2);background:var(--carbon-soft);border-radius:10px;padding:8px 10px;margin:-2px 0 10px}
 body.batch .stamp{border-width:4px}
@@ -105,7 +130,8 @@ body.batch .stamp{border-width:4px}
 .bdates button{flex:none;border:2px solid rgba(255,255,255,.25);background:transparent;color:#fff;border-radius:10px;padding:8px 12px;font-size:15px;font-variant-numeric:tabular-nums}
 .bdates button[aria-pressed=true]{background:#fff;color:#111;border-color:#fff;font-weight:900}
 .blabel{font-size:12px;opacity:.6;zoom:var(--z)}
-.sheet.batchmode #shMore>*:not(#shOrdWrap){display:none}
+.sheet.batchmode #shMore{display:none}
+.locpill{display:inline-block;padding:1px 8px;border-radius:999px;background:var(--carbon-soft);color:var(--carbon);font-weight:700}
 /* sticker color */
 .ctarget{position:absolute;left:50%;top:50%;width:76px;height:76px;margin:-38px 0 0 -38px;border-radius:50%;border:4px solid #fff;box-shadow:0 0 0 200vmax rgba(0,0,0,.5),inset 0 0 0 3px rgba(0,0,0,.4);z-index:2;pointer-events:none}
 .ctarget::before{content:"";position:absolute;inset:-14px;border-radius:50%;border:3px solid rgba(255,255,255,.7);animation:pulse 1.2s ease-out infinite}
@@ -214,6 +240,19 @@ body.camOn{overflow:hidden}
 .msg.warn{color:var(--stamp)} .msg.ok{color:var(--ok)}
 
 /* lookup result: big */
+.findcard{border:1px solid var(--line);border-radius:12px;background:var(--card);margin:8px 0;overflow:hidden}
+.findcard .fl{padding:10px 12px;font-size:20px;font-weight:900;color:#222}
+.findcard .fr{padding:8px 12px;display:flex;flex-wrap:wrap;gap:4px 12px;font-variant-numeric:tabular-nums}
+.findcard .fr span{color:var(--ink2);font-size:14px}
+.pickprog{font-size:18px;font-weight:900;margin:4px 0 8px}
+.pickprog .bar{height:10px;border-radius:5px;background:var(--line);overflow:hidden;margin-top:6px}
+.pickprog .bar i{display:block;height:100%;background:var(--ok)}
+.pickleft{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.pickleft span{padding:6px 10px;border-radius:10px;font-weight:700;color:#222;font-size:15px}
+.lookup.yes{border:4px solid var(--ok);background:color-mix(in srgb,var(--ok) 12%,var(--card))}
+.lookup.no{border:4px solid var(--stamp);background:color-mix(in srgb,var(--stamp) 10%,var(--card))}
+.lookup .verdict{font-size:30px;font-weight:900;line-height:1.2}
+.lookup.yes .verdict{color:var(--ok)} .lookup.no .verdict{color:var(--stamp)}
 .lookup{display:none;margin-top:10px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
 .lookup.on{display:block}
 .lookup .code{font-size:14px;color:var(--ink2);word-break:break-all}
@@ -289,9 +328,16 @@ body.camOn{overflow:hidden}
 
   <div class="mode" role="group" aria-label="模式">
     <button id="mAdd" aria-pressed="true">登記傳票</button>
-    <button id="mLook" aria-pressed="false">包貨查詢</button>
+    <button id="mLook" aria-pressed="false">揀貨・查詢</button>
   </div>
 
+  <div id="pickPanel" hidden>
+    <div class="meta">揀貨：要出貨的日期</div>
+    <select class="mfdate" id="pickDate" aria-label="揀貨日期"></select>
+    <label class="check"><input type="checkbox" id="pickAuto" checked> 掃到「要出貨」的就自動標記已出貨</label>
+    <div class="pickprog" id="pickProg"></div>
+    <div id="pickLeft"></div>
+  </div>
   <div id="addPanel">
     <div class="meta">掃描方式</div>
     <div class="mode smode" role="group" aria-label="掃描方式">
@@ -321,6 +367,7 @@ body.camOn{overflow:hidden}
     <div id="sizeBarWrap"><div class="meta" id="sizeLbl">預設箱子尺寸</div>
     <div class="sizes" id="sizeBar"></div></div>
     <input type="checkbox" id="askEach" checked hidden>
+    <div class="period"><span>📅 出貨期間</span><input type="date" id="pStart"><span>～</span><input type="date" id="pEnd"></div>
     <label class="check"><input type="checkbox" id="onlyTrack" checked> 只讀追蹤號碼（お問合せNo 12 碼），忽略傳票上其他條碼</label>
     <div id="eachOpts">
     <label class="check"><input type="checkbox" id="ocrDate" checked> 自動讀取傳票上的「発送日」當出貨日</label>
@@ -375,8 +422,9 @@ body.camOn{overflow:hidden}
 
   <div class="tabs" role="tablist">
     <button role="tab" id="tabDay" aria-selected="true">當日</button>
+    <button role="tab" id="tabFind" aria-selected="false">🔍 找貨</button>
+    <button role="tab" id="tabMap" aria-selected="false">📍 地圖</button>
     <button role="tab" id="tabMonth" aria-selected="false">月總覽</button>
-    <button role="tab" id="tabFind" aria-selected="false">搜尋</button>
   </div>
 
   <section id="viewDay">
@@ -394,8 +442,21 @@ body.camOn{overflow:hidden}
     <div id="cell"></div>
   </section>
 
+  <section id="viewMap" hidden>
+    <div class="mode smode" role="group" aria-label="篩選">
+      <button id="mfAll" aria-pressed="true">全部在庫</button>
+      <button id="mfToday" aria-pressed="false">今天出貨</button>
+      <button id="mfTmr" aria-pressed="false">明天出貨</button>
+    </div>
+    <select class="mfdate" id="mfDate" aria-label="出貨日"></select>
+    <label class="check"><input type="checkbox" id="autoExp" checked> 出貨日過了就自動從地圖移除（不用按已出貨）</label>
+    <div class="mapwrap" id="map"></div>
+    <div class="maplegend"><span><b class="lg today"></b>有今天出貨</span><span><b class="lg late"></b>出貨日已過</span></div>
+    <div id="mapCell"></div>
+  </section>
+
   <section id="viewFind" hidden>
-    <div class="search"><input id="q" placeholder="輸入條碼或備註的一部分" autocomplete="off"></div>
+    <div class="search"><input id="q" inputmode="numeric" placeholder="🔍 找貨：輸入追蹤號碼後 4 碼" autocomplete="off"></div>
     <div id="results"></div>
   </section>
 
@@ -416,12 +477,13 @@ body.camOn{overflow:hidden}
   <div class="code" id="shCode"></div>
   <div class="shsum" id="shSum"></div>
   <div class="meta" id="shWarn" style="color:var(--stamp)"></div>
-  <div class="meta" style="margin-top:8px">點尺寸就儲存</div>
+  <div class="meta" style="margin-top:6px">① 貼紙顏色（注文日）<span class="auto" id="shAuto"></span></div>
+  <div class="cchips" id="shColors"></div>
+  <div class="meta">② 點尺寸就儲存　<span id="shLoc" class="locpill"></span></div>
   <div class="sizes" id="shSizes"></div>
   <div id="shMore">
-  <div class="meta" style="margin-top:6px">訂貨日（貼紙）<span class="auto" id="shAuto"></span></div>
-  <div class="cchips" id="shColors"></div>
-  <div class="row" id="shOrdRow" style="gap:6px;margin:-4px 0 10px">
+  <div class="meta" style="margin-top:6px">注文日（微調）</div>
+  <div class="row" id="shOrdRow" style="gap:6px;margin:4px 0 10px">
     <button class="nav" id="shOrdPrev" aria-label="前一週">‹週</button>
     <input type="date" id="shOrd" aria-label="訂貨日" style="flex:1">
     <button class="nav" id="shOrdNext" aria-label="後一週">週›</button>
@@ -465,7 +527,7 @@ body.camOn{overflow:hidden}
   const ROOT='slipScan';
   // 每張傳票各自一筆（days/日期/items/id）→ 多人同時登記不會互相覆蓋
   const itemPath=(date,id)=>'days/'+date+'/items/'+id;
-  const cleanOne=i=>({id:i.id, code:i.code, size:i.size||'', order:i.order||'', note:i.note||'', t:i.t||'', ts:i.ts||0});
+  const cleanOne=i=>({id:i.id, code:i.code, size:i.size||'', order:i.order||'', note:i.note||'', t:i.t||'', ts:i.ts||0, done:!!i.done});
   const tsOf=i=>i.ts || parseInt(String(i.id).slice(0,8),36) || 0;
   const keyOf=code=>'c_'+String(code).replace(/[.#$\[\]\/\s]/g,'_');   // 用追蹤號碼當 key：兩台同時掃同一張只會有一筆
   let Q=[]; try{ Q=JSON.parse(localStorage.getItem('slipQ')||'[]'); }catch(_){ Q=[]; }
@@ -534,6 +596,7 @@ body.camOn{overflow:hidden}
         Object.keys(v).forEach(k=>{ if(v[k] && (!colors[k] || (v[k].ts||0)>(colors[k].ts||0))){ colors[k]=v[k]; changed=true; } });
         if(changed){ try{ localStorage.setItem('slipColors', JSON.stringify(colors)); }catch(_){} renderColors(); } }
     }, ()=>{});
+    rtdb.ref(ROOT+'/period').on('value',s=>{ const v=s.val(); if(v&&v.start){ period=v; $('pStart').value=v.start; $('pEnd').value=v.end||''; try{localStorage.setItem('slipPeriod',JSON.stringify(v));}catch(_){} renderBatchDates(); renderMap(); } }, ()=>{});
     rtdb.ref(ROOT+'/shipOffset').on('value',s=>{ const v=s.val(); if(v!==null && v!==undefined && document.activeElement!==$('cOff')){ $('cOff').value=v; try{localStorage.setItem('slipOff',v);}catch(_){} } }, ()=>{});
     rtdb.ref(ROOT+'/sizes').on('value',s=>{
       const v=s.val(); const list=Array.isArray(v)?v:(v?Object.values(v):null);
@@ -692,6 +755,27 @@ body.camOn{overflow:hidden}
   function renderRecent(){
     $('recent').innerHTML = sessionList.length ? '<div class="hd">剛剛登記</div>'+sessionList.slice(0,6).map(x=>'<li><span class="badge" style="--c:'+sizeColor(x.size)+'">'+esc(sizeLbl(x.size))+'</span><span class="c">'+esc(fmtCode(x.code))+'</span><span class="d">'+md(x.date)+'</span></li>').join('') : '';
   }
+  /* 出貨期間（例：情人節檔期 1/20～2/10）：日期按鈕只列這段期間 */
+  let period={start:'',end:''};
+  try{ period=JSON.parse(localStorage.getItem('slipPeriod')||'null')||period; }catch(_){}
+  if(!period.start){ const y=new Date().getMonth()>=2?new Date().getFullYear()+1:new Date().getFullYear(); period={start:y+'-01-20', end:y+'-02-10'}; }
+  function periodDates(){
+    if(!period.start||!period.end||period.end<period.start) return [];
+    const out=[]; for(let d=period.start; d<=period.end && out.length<120; d=addDays(d,1)) out.push(d); return out;
+  }
+  function quickDates(){
+    const P=periodDates(); if(P.length) return P;
+    const arr=[]; for(let i=-1;i<14;i++){ const d=new Date(); d.setDate(d.getDate()+i); arr.push(ymd(d)); } return arr;
+  }
+  function savePeriod(){
+    period={start:$('pStart').value, end:$('pEnd').value};
+    try{ localStorage.setItem('slipPeriod', JSON.stringify(period)); }catch(_){}
+    if(mode==='db' && rtdb) rtdb.ref(ROOT+'/period').set(period).catch(()=>{});
+    renderBatchDates(); renderMap();
+  }
+  $('pStart').value=period.start; $('pEnd').value=period.end;
+  $('pStart').onchange=savePeriod; $('pEnd').onchange=savePeriod;
+
   let scanMode='each', sizeFixed=false;
   try{ scanMode=localStorage.getItem('slipMode')||'each'; sizeFixed=localStorage.getItem('slipSizeFix')==='1'; }catch(_){}
   const isBatch=()=>scanMode==='batch';
@@ -711,7 +795,7 @@ body.camOn{overflow:hidden}
   function renderBatchDates(){
     $('bPanel').hidden = !(isBatch() && appMode==='add' && camPurpose==='scan');
     if($('bPanel').hidden) return;
-    const arr=[]; for(let i=-1;i<14;i++){ const d=new Date(); d.setDate(d.getDate()+i); arr.push(ymd(d)); }
+    const arr=quickDates();
     if(!arr.includes(current)) arr.push(current), arr.sort();
     $('bDates').innerHTML=arr.map(d=>'<button data-bd="'+d+'" aria-pressed="'+(d===current)+'">'+(d===TODAY?'今天 ':'')+md(d)+'</button>').join('');
     const on=$('bDates').querySelector('[aria-pressed=true]'); on&&on.scrollIntoView({inline:'center',block:'nearest'});
@@ -738,7 +822,7 @@ body.camOn{overflow:hidden}
     let g1='', g2='';
     if(st==='scan' && isBatch() && appMode==='add'){ g1=n+'掃 <u>'+md(current)+'</u> 的傳票'; g2 = sizeFixed ? '全部存成這天・<span class="badge" style="--c:'+sizeColor(curSize)+'">'+esc(curSize)+'</span>' : '全部存成這天，掃到後選尺寸'; }
     else if(st==='scan'){ g1=n+(appMode==='look'?'掃條碼查詢':'對準傳票條碼');
-      g2 = appMode==='look' ? '馬上顯示出貨日和箱子尺寸' : ($('onlyTrack').checked?'對準「お問合せNo」上方的條碼':'條碼放進白框，紅線會自動讀取'); }
+      g2 = appMode==='look' ? (pickDay?'揀 '+md(pickDay)+' 的貨：綠色要出、紅色放回':'掃傳票，顯示貨放在哪裡') : ($('onlyTrack').checked?'對準「お問合せNo」上方的條碼':'條碼放進白框，紅線會自動讀取'); }
     else if(st==='color'){ g1=n+'移到日期貼紙'; g2='讓貼紙在圓圈裡，自動判斷顏色'; }
     else if(st==='size'){ g1=n+'選箱子尺寸'; g2=''; }
     else if(st==='calib'){ g1='校正 '+wdName(calibWd); g2='把貼紙放滿圓圈，按「取色」'; }
@@ -791,7 +875,7 @@ body.camOn{overflow:hidden}
     freshId = item.id;
     say('已登記 '+fmtCode(code)+' → '+md(date)+'・'+sizeLbl(size),'ok');
     sessionList.unshift({code,date,size,order}); renderRecent();
-    doneToast('✓ 已登記', code, date, size);
+    doneToast(order?'✓ 放 '+locName(order,size):'✓ 已登記', code, date, size);
     render();
     putItem(date,item);
   }
@@ -849,8 +933,45 @@ body.camOn{overflow:hidden}
     afterColor(code, '');
   }
 
+  /* ---------- 揀貨：選出貨日 → 掃箱子 → 綠色＝要出、紅色＝不是這天 ---------- */
+  let pickDay=TODAY;
+  function renderPick(){
+    if($('pickPanel').hidden) return;
+    const cnt={}; for(const d in days) days[d].items.forEach(i=>{ if(!i.done) cnt[d]=(cnt[d]||0)+1; });
+    const ds=[...new Set([TODAY, ...periodDates(), ...Object.keys(cnt)])].sort();
+    $('pickDate').innerHTML='<option value=""'+(pickDay===''?' selected':'')+'>📍 只找位置（不揀貨）</option>'+ds.map(d=>'<option value="'+d+'"'+(d===pickDay?' selected':'')+'>'+md(d)+(d===TODAY?' 今天':'')+'　剩 '+(cnt[d]||0)+' 箱</option>').join('');
+    if(!pickDay){ $('pickProg').innerHTML='<span style="font-size:15px">掃傳票就顯示貨放在哪裡</span>'; $('pickLeft').innerHTML=''; return; }
+    const L=(days[pickDay]&&days[pickDay].items)||[], done=L.filter(i=>i.done).length;
+    $('pickProg').innerHTML = L.length ? md(pickDay)+' 已揀 '+done+' / '+L.length+' 箱<div class="bar"><i style="width:'+(done/L.length*100)+'%"></i></div>' : md(pickDay)+' 沒有要出的貨';
+    const g={}; L.filter(i=>!i.done).forEach(i=>{ const k=i.order?parse(i.order).getDay()+'|'+(i.size||''):'x|'+(i.size||''); g[k]=(g[k]||0)+1; });
+    $('pickLeft').innerHTML = Object.keys(g).length ? '<div class="meta">還要去拿：</div><div class="pickleft">'+Object.keys(g).sort().map(k=>{ const [c,sz]=k.split('|');
+      return '<span style="background:'+(c==='x'?'var(--line)':'rgb('+colors[c].rgb.join(',')+')')+'">'+(c==='x'?'未分':esc(COLNAME(+c)))+'・'+esc(sizeLbl(sz))+' × '+g[k]+'</span>'; }).join('')+'</div>' : (L.length?'<div class="meta" style="color:var(--ok);font-weight:700">✓ 這天全部揀完了</div>':'');
+  }
+  $('pickDate').onchange=e=>{ pickDay=e.target.value; renderPick(); };
+  try{ const v=localStorage.getItem('slipPickAuto'); if(v!==null) $('pickAuto').checked=v==='1'; }catch(_){}
+  $('pickAuto').onchange=()=>{ try{ localStorage.setItem('slipPickAuto',$('pickAuto').checked?'1':'0'); }catch(_){} };
+
   function showLookup(code){
     const hits=findCode(code), box=$('lookup');
+    const hit=hits.find(h=>h.date===pickDay);
+    if(hits.length && pickDay){
+      const flash=(ok)=>{ if(camOn()){ const c=$('cam'); c.classList.remove('hit','bad'); void c.offsetWidth; c.classList.add(ok?'hit':'bad'); setTimeout(()=>c.classList.remove('hit','bad'),900); } };
+      const locOf=it=>it.order?'<div class="locbig" style="background:rgb('+colors[parse(it.order).getDay()].rgb.join(',')+');color:#222">📍 '+esc(locName(it.order,it.size))+'</div>':'';
+      if(hit){
+        const was=hit.item.done; if(!was && $('pickAuto').checked) setDone(hit.date, hit.item.id, true);
+        const L=days[pickDay].items, done=L.filter(i=>i.done).length;
+        box.className='lookup on yes';
+        box.innerHTML='<div class="verdict">✓ 要出貨</div><div class="code">'+esc(fmtCode(code))+'</div>'+locOf(hit.item)+
+          '<div class="meta">'+(was?'（之前已標記過）':'')+md(pickDay)+' 已揀 '+done+' / '+L.length+'</div>'+
+          (!$('pickAuto').checked && !hit.item.done ? '<div><button class="donebtn" data-lookdone="'+hit.date+'|'+hit.item.id+'" style="font-size:16px;padding:8px 16px;margin-top:6px">✓ 出貨了</button></div>':'');
+        buzz(80); flash(true); if(camOn()){ sessionN++; camInfo(); } renderPick(); return;
+      } else {
+        const h=hits[0];
+        box.className='lookup on no';
+        box.innerHTML='<div class="verdict">✗ 不是 '+md(pickDay)+' 的</div><div class="code">'+esc(fmtCode(code))+'</div><div class="big"><div class="bd">'+md(h.date)+' 出貨</div></div>'+locOf(h.item)+'<div class="meta">放回去</div>';
+        buzz([80,60,80]); flash(false); return;
+      }
+    }
     box.classList.add('on');
     if(!hits.length){
       box.className='lookup on miss';
@@ -860,7 +981,9 @@ body.camOn{overflow:hidden}
     box.className='lookup on';
     box.innerHTML='<div class="code">'+esc(fmtCode(code))+'</div>'+hits.map(h=>{
       const late = h.date<TODAY ? '<div class="meta" style="color:var(--stamp)">出貨日已過</div>' : (h.date===TODAY?'<div class="meta" style="color:var(--stamp)">今天出貨</div>':'');
-      return '<div class="big"><div class="bd">'+md(h.date)+'</div><div class="bs" style="--c:'+sizeColor(h.item.size)+'">'+esc(sizeLbl(h.item.size))+'</div></div>'+late+
+      const loc = h.item.order ? '<div class="locbig" style="background:rgb('+colors[parse(h.item.order).getDay()].rgb.join(',')+');color:#222">📍 '+esc(locName(h.item.order,h.item.size))+'</div>' : '<div class="meta">📍 沒有注文日，位置未定</div>';
+      return '<div class="big"><div class="bd">'+md(h.date)+'</div><div class="bs" style="--c:'+sizeColor(h.item.size)+'">'+esc(sizeLbl(h.item.size))+'</div></div>'+loc+late+
+        (h.item.done?'<div class="meta" style="color:var(--ok)">✓ 已出貨</div>':'<div><button class="donebtn" data-lookdone="'+h.date+'|'+h.item.id+'" style="font-size:16px;padding:8px 16px;margin-top:6px">✓ 出貨了</button></div>')+
         (h.item.note?'<div class="meta">'+esc(h.item.note)+'</div>':'');
     }).join('')+(hits.length>1?'<div class="meta" style="color:var(--stamp)">這張登記在 '+hits.length+' 個日期</div>':'');
     buzz(80); if(camOn()){ sessionN++; camInfo(); const c=$('cam'); c.classList.remove('hit','bad'); void c.offsetWidth; c.classList.add('hit'); setTimeout(()=>c.classList.remove('hit'),800); }
@@ -894,12 +1017,13 @@ body.camOn{overflow:hidden}
   function renderSheet(){
     // quick dates: next 14 days from today plus current
     const set=new Set();
-    for(let i=-1;i<14;i++){ const d=new Date(); d.setDate(d.getDate()+i); set.add(ymd(d)); }
+    quickDates().forEach(d=>set.add(d));
     set.add(pending.date);
     const arr=[...set].sort();
     $('shQuick').innerHTML=arr.map(d=>'<button data-qd="'+d+'" aria-pressed="'+(d===pending.date)+'">'+(d===TODAY?'今天 ':'')+md(d)+'</button>').join('');
     const od = pending.order ? parse(pending.order).getDay() : -1;
     $('shOrd').value = pending.order||'';
+    $('shLoc').textContent = pending.order ? '📍 '+locName(pending.order, curSize) : '';
     $('shColors').innerHTML = WD_ORDER.map(w=>'<button class="cchip" data-cw="'+w+'" aria-pressed="'+(w===od)+'">'+swatch(w)+WD[w]+(colors[w]&&colors[w].name?'<small>'+esc(colors[w].name)+'</small>':'')+'</button>').join('');
     $('shSizes').innerHTML=sizes.map(s=>'<button class="sz" data-shs="'+esc(s)+'" style="--c:'+sizeColor(s)+'" aria-pressed="'+(s===curSize)+'">'+esc(s)+'</button>').join('');
     const q=$('shQuick').querySelector('[aria-pressed=true]'); q&&q.scrollIntoView({inline:'center',block:'nearest'});
@@ -917,13 +1041,71 @@ body.camOn{overflow:hidden}
     return keys.map(k=>'<span><span class="badge" style="--c:'+sizeColor(k)+'">'+esc(sizeLbl(k))+'</span> ×'+counts[k]+'</span>').join('');
   }
 
+  /* ---------- 入庫地圖：位置 = 注文日的星期（貼紙顏色）× 箱子尺寸 ---------- */
+  const COLNAME=w=>(colors[w]&&colors[w].name)||WD[w];
+  function locName(order,size){ const w=parse(order).getDay(); return COLNAME(w)+'（'+WD[w]+'）・'+sizeLbl(size); }
+  let mapFilter='all', mapSel=null;
+  const autoExp=()=>!$('autoExp') || $('autoExp').checked;
+  const gone=(d,it)=>it.done || (autoExp() && d<TODAY);          // 已出貨，或出貨日已過 → 不用再管
+  function stockItems(){
+    const out=[]; for(const d in days) for(const it of days[d].items) if(!gone(d,it)) out.push({date:d,it});
+    return out;
+  }
+  function renderMap(){
+    if(!$('map')) return;
+    const tm=ymd(new Date(Date.now()+864e5));
+    let all=stockItems();
+    // 出貨日下拉選單（期間內每一天＋有貨的日期）
+    const allStock=stockItems(), cnt={}; allStock.forEach(x=>cnt[x.date]=(cnt[x.date]||0)+1);
+    const ds=[...new Set([...periodDates(), ...Object.keys(cnt)])].sort();
+    const sel=$('mfDate'), want=mapFilter.startsWith('d:')?mapFilter.slice(2):'';
+    sel.innerHTML='<option value="">出貨日：全部（'+allStock.length+' 箱）</option>'+ds.map(d=>'<option value="'+d+'"'+(d===want?' selected':'')+'>'+md(d)+(d===TODAY?' 今天':'')+'　'+(cnt[d]||0)+' 箱</option>').join('');
+    if(mapFilter==='today') all=all.filter(x=>x.date===TODAY); else if(mapFilter==='tmr') all=all.filter(x=>x.date===tm); else if(want) all=all.filter(x=>x.date===want);
+    const cols=[...WD_ORDER]; if(all.some(x=>!x.it.order)) cols.push('x');
+    const used=new Set(all.map(x=>x.it.size||'')); const rows=[...sizes, ...[...used].filter(k=>!sizes.includes(k))];
+    const cell={}; all.forEach(x=>{ const c=x.it.order?parse(x.it.order).getDay():'x', k=c+'|'+(x.it.size||''); (cell[k]=cell[k]||[]).push(x); });
+    let h='<table class="map"><thead><tr><th></th>'+cols.map(c=>c==='x'
+      ? '<th class="wd" style="background:var(--line)">未分</th>'
+      : '<th class="wd" style="background:rgb('+colors[c].rgb.join(',')+')">'+esc(COLNAME(c))+'<br>'+WD[c]+'</th>').join('')+'</tr></thead><tbody>';
+    rows.forEach(r=>{
+      h+='<tr><th class="rowh"><span class="badge" style="--c:'+sizeColor(r)+'">'+esc(sizeLbl(r))+'</span></th>';
+      cols.forEach(c=>{ const k=c+'|'+r, L=cell[k]||[];
+        const nt=L.filter(x=>x.date===TODAY).length, nl=L.filter(x=>x.date<TODAY).length;
+        const cls=[L.length?'':'empty', nl?'late':nt?'today':'', mapSel===k?'sel':''].join(' ');
+        h+='<td><button class="'+cls+'" data-mk="'+k+'" aria-label="'+(c==='x'?'未分':COLNAME(c))+' '+esc(sizeLbl(r))+' '+L.length+'箱">'+(L.length||'·')+(nt&&!nl?'<i>今'+nt+'</i>':nl?'<i>過'+nl+'</i>':'')+'</button></td>'; });
+      h+='</tr>';
+    });
+    h+='</tbody></table>';
+    $('map').innerHTML = all.length ? h : '<div class="empty"><b>'+(mapFilter==='all'?'目前沒有在庫的貨':'沒有這天出貨的貨')+'</b></div>';
+    // selected cell list
+    if(mapSel && cell[mapSel]){
+      const L=cell[mapSel].sort((a,b)=>a.date<b.date?-1:1), [c,r]=mapSel.split('|');
+      const title=(c==='x'?'未分':COLNAME(+c)+'（'+WD[+c]+'）')+'・'+sizeLbl(r);
+      const todayN=L.filter(x=>x.date<=TODAY).length;
+      $('mapCell').innerHTML='<div class="grp">📍 '+esc(title)+' '+L.length+' 箱'+(todayN?' <button class="donebtn" data-alldone="'+mapSel+'">今天以前出貨的 '+todayN+' 箱 → 全部已出貨</button>':'')+'</div><ul class="list">'+
+        L.map(x=>'<li class="slip" style="--c:'+sizeColor(x.it.size)+'" data-date="'+x.date+'" data-id="'+x.it.id+'"><div><div class="code">'+esc(fmtCode(x.it.code))+'</div><div class="meta">出貨 '+md(x.date)+(x.date<TODAY?' <b style="color:var(--stamp)">已過</b>':x.date===TODAY?' <b style="color:var(--stamp)">今天</b>':'')+(x.it.order?'　注文 '+md(x.it.order):'')+'</div></div><button class="donebtn" data-act="done">已出貨</button></li>').join('')+'</ul>';
+    } else $('mapCell').innerHTML='<p class="meta">點格子看裡面是哪幾張。出貨後按「已出貨」，就會從地圖移除。</p>';
+  }
+  async function setDone(date,id,v){ const it=days[date]&&days[date].items.find(i=>i.id===id); if(!it) return; it.done=v; render(); putItem(date,it); }
+  try{ const v=localStorage.getItem('slipAutoExp'); if(v!==null) $('autoExp').checked=v==='1'; }catch(_){}
+  $('autoExp').onchange=()=>{ try{ localStorage.setItem('slipAutoExp',$('autoExp').checked?'1':'0'); }catch(_){} render(); };
+  $('mfDate').onchange=e=>{ mapFilter=e.target.value?'d:'+e.target.value:'all'; mapSel=null; ['mfAll','mfToday','mfTmr'].forEach(x=>$(x).setAttribute('aria-pressed', x==='mfAll'&&!e.target.value)); renderMap(); };
+  ['mfAll','mfToday','mfTmr'].forEach((id,i)=>{ $(id).onclick=()=>{ mapFilter=['all','today','tmr'][i]; mapSel=null; ['mfAll','mfToday','mfTmr'].forEach(x=>$(x).setAttribute('aria-pressed', x===id)); renderMap(); }; });
+  $('map').onclick=e=>{ const b=e.target.closest('[data-mk]'); if(!b) return; mapSel = mapSel===b.dataset.mk ? null : b.dataset.mk; renderMap(); if(mapSel) $('mapCell').scrollIntoView({block:'nearest',behavior:'smooth'}); };
+  $('mapCell').onclick=e=>{
+    const a=e.target.closest('[data-alldone]');
+    if(a){ const L=[]; for(const d in days) if(d<=TODAY) for(const it of days[d].items){ const c=it.order?parse(it.order).getDay():'x'; if(!it.done && c+'|'+(it.size||'')===a.dataset.alldone) L.push([d,it]); }
+      if(!confirm(L.length+' 箱標記為已出貨？')) return; L.forEach(([d,it])=>{ it.done=true; putItem(d,it); }); render(); say(L.length+' 箱已出貨','ok'); return; }
+  };
+
   let dupIdx={};
   function buildDup(){ dupIdx={}; for(const d in days) for(const i of days[d].items) (dupIdx[i.code]=dupIdx[i.code]||[]).push(d); }
   function slipHTML(it,date,search){
     const c=sizeColor(it.size);
+    const loc = it.order ? '　📍'+esc(locName(it.order,it.size)) : '';
     const others=(dupIdx[it.code]||[]).filter(d=>d!==date);
-    let h='<li class="slip'+(it.id===freshId?' flash':'')+'" style="--c:'+c+'" data-date="'+date+'" data-id="'+it.id+'">'+
-      '<div><div class="code">'+esc(fmtCode(it.code))+'</div><div class="meta">'+(search?md(date)+'　':'')+'<span class="badge" style="--c:'+c+'">'+esc(sizeLbl(it.size))+'</span>'+(it.order?'　訂 '+md(it.order):'')+'　'+esc(it.t||'')+(others.length?'<br><b style="color:var(--stamp)">⚠ 重複：也在 '+others.map(md).join('、')+'</b>':'')+'</div></div>';
+    let h='<li class="slip'+(it.done?' done':'')+(it.id===freshId?' flash':'')+'" style="--c:'+c+'" data-date="'+date+'" data-id="'+it.id+'">'+
+      '<div><div class="code">'+esc(fmtCode(it.code))+'</div><div class="meta">'+(search?md(date)+'　':'')+'<span class="badge" style="--c:'+c+'">'+esc(sizeLbl(it.size))+'</span>'+(it.order?'　訂 '+md(it.order):'')+loc+'　'+esc(it.t||'')+(it.done?'　<b style="color:var(--ok)">✓已出貨</b> <button class="linkbtn" data-act="undone" style="font-size:12px">復原</button>':'')+(others.length?'<br><b style="color:var(--stamp)">⚠ 重複：也在 '+others.map(md).join('、')+'</b>':'')+'</div></div>';
     if(search){
       h+='<button class="jump" data-act="jump">看當天</button>'+(it.note?'<div class="full meta">'+esc(it.note)+'</div>':'');
     } else {
@@ -955,7 +1137,7 @@ body.camOn{overflow:hidden}
     if(!typing) $('dayList').innerHTML = items.length ? items.map(it=>slipHTML(it,current,false)).join('')
       : '<li class="empty"><b>'+md(current)+' 還沒有傳票</b>按「用相機掃描」開始登記</li>';
 
-    renderMonth(); renderFind();
+    renderMonth(); renderFind(); renderMap(); renderPick();
   }
 
   function renderMonth(){
@@ -986,35 +1168,39 @@ body.camOn{overflow:hidden}
 
   function renderFind(){
     const q=$('q').value.trim().toLowerCase().replace(/[\s\-]/g,'');
-    if(!q){ $('results').innerHTML='<p class="meta">也可以切到上方「包貨查詢」直接掃條碼查</p>'; return; }
-    let h='',n=0;
-    Object.keys(days).sort().reverse().forEach(d=>{
-      const hits=days[d].items.filter(i=>i.code.toLowerCase().includes(q)||(i.note||'').toLowerCase().includes(q));
-      if(!hits.length) return; n+=hits.length;
-      h+='<div class="grp">'+md(d)+' '+d.slice(0,4)+'</div><ul class="list">'+hits.map(it=>slipHTML(it,d,true)).join('')+'</ul>';
+    if(!q){ $('results').innerHTML='<p class="meta">輸入追蹤號碼的<b>後 4 碼</b>就找得到。也可以切到上方「揀貨・查詢」直接掃傳票。</p>'; return; }
+    let h='',n=0, old=0;
+    Object.keys(days).sort().forEach(d=>{
+      days[d].items.filter(i=>i.code.toLowerCase().includes(q)||(i.note||'').toLowerCase().includes(q)).forEach(it=>{
+        if(gone(d,it)){ old++; return; } n++;
+        const bg = it.order ? 'rgb('+colors[parse(it.order).getDay()].rgb.join(',')+')' : 'var(--line)';
+        h+='<div class="findcard"><div class="fl" style="background:'+bg+'">📍 '+(it.order?esc(locName(it.order,it.size)):'位置未定（沒有注文日）')+'</div>'+
+           '<div class="fr"><b>'+esc(fmtCode(it.code))+'</b><span>出貨 '+md(d)+(d===TODAY?' 今天':'')+'</span>'+(it.note?'<span>'+esc(it.note)+'</span>':'')+'</div></div>';
+      });
     });
-    $('results').innerHTML=n?h:'<div class="empty"><b>找不到「'+esc(q)+'」</b>試試輸入條碼的後幾碼</div>';
+    if(old) h+='<p class="meta">另有 '+old+' 筆已出貨／出貨日已過，不顯示。</p>';
+    $('results').innerHTML=(n||old)?h:'<div class="empty"><b>找不到「'+esc(q)+'」</b>試試輸入條碼的後幾碼</div>';
   }
 
   function go(d){ current=d; month=d.slice(0,7); freshId=null; render(); }
   function shift(n){ const d=parse(current); d.setDate(d.getDate()+n); go(ymd(d)); }
   function shiftMonth(n){ const [y,m]=month.split('-').map(Number); const d=new Date(y,m-1+n,1); month=d.getFullYear()+'-'+pad(d.getMonth()+1); cellSel=null; renderMonth(); }
   function showTab(t){
-    [['day','tabDay','viewDay'],['month','tabMonth','viewMonth'],['find','tabFind','viewFind']].forEach(([k,tb,v])=>{
+    [['day','tabDay','viewDay'],['map','tabMap','viewMap'],['month','tabMonth','viewMonth'],['find','tabFind','viewFind']].forEach(([k,tb,v])=>{
       $(tb).setAttribute('aria-selected',t===k); $(v).hidden=t!==k; });
   }
   function setMode(m){
     appMode=m; setTimeout(renderBatchDates,0);
     $('mAdd').setAttribute('aria-pressed',m==='add'); $('mLook').setAttribute('aria-pressed',m==='look');
-    $('addPanel').hidden = m!=='add';
+    $('addPanel').hidden = m!=='add'; $('pickPanel').hidden = m!=='look'; if(m==='look') renderPick();
     $('scan').classList.toggle('look',m==='look');
-    $('scanLbl').textContent = m==='add' ? '用相機掃描' : '掃條碼查出貨日和尺寸';
+    $('scanLbl').textContent = m==='add' ? '用相機掃描' : '開始揀貨（掃箱子上的傳票）';
     $('lookup').classList.remove('on'); say('');
-    if(m==='look') showTab('month');
+    if(m==='look') showTab('map');
   }
 
   /* ---------- events ---------- */
-  $('lookup').onclick=()=>{ if(camOn()) $('lookup').classList.remove('on'); };
+  $('lookup').onclick=e=>{ const b=e.target.closest('[data-lookdone]'); if(b){ const [d,id]=b.dataset.lookdone.split('|'); setDone(d,id,true); b.outerHTML='<div class="meta" style="color:var(--ok)">✓ 已出貨</div>'; buzz(60); return; } if(camOn()) $('lookup').classList.remove('on'); };
   $('mAdd').onclick=()=>setMode('add');
   $('mLook').onclick=()=>setMode('look');
   $('prev').onclick=()=>shift(-1); $('next').onclick=()=>shift(1);
@@ -1023,6 +1209,7 @@ body.camOn{overflow:hidden}
   $('mPrev').onclick=()=>shiftMonth(-1); $('mNext').onclick=()=>shiftMonth(1);
   $('month').onchange=e=>{ if(e.target.value){ month=e.target.value; cellSel=null; renderMonth(); } };
   $('tabDay').onclick=()=>showTab('day');
+  $('tabMap').onclick=()=>{ showTab('map'); renderMap(); };
   $('tabMonth').onclick=()=>{ showTab('month'); renderMonth(); };
   $('tabFind').onclick=()=>{ showTab('find'); renderFind(); $('q').focus(); };
   $('q').oninput=renderFind;
@@ -1055,6 +1242,8 @@ body.camOn{overflow:hidden}
     const a=b.dataset.act;
     if(a==='del'){ if(confirm('刪除這張傳票？')) removeItem(li.dataset.date,li.dataset.id); }
     else if(a==='jump'){ go(li.dataset.date); showTab('day'); setMode('add'); window.scrollTo({top:0}); }
+    else if(a==='done'){ setDone(li.dataset.date, li.dataset.id, true); say('已出貨：'+fmtCode((days[li.dataset.date].items.find(i=>i.id===li.dataset.id)||{}).code||''),'ok'); }
+    else if(a==='undone'){ setDone(li.dataset.date, li.dataset.id, false); }
     else if(a==='size'){ patchItem(li.dataset.date,li.dataset.id,{size:b.dataset.s}); }
   });
   document.addEventListener('input',e=>{
