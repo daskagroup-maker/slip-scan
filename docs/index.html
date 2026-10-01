@@ -288,6 +288,7 @@ body.camOn{overflow:hidden}
     <div class="meta">箱子尺寸</div>
     <div class="sizes" id="sizeBar"></div>
     <label class="check"><input type="checkbox" id="askEach" checked> 每掃一張就選日期和尺寸</label>
+    <label class="check"><input type="checkbox" id="onlyTrack" checked> 只讀追蹤號碼（お問合せNo 12 碼），忽略傳票上其他條碼</label>
     <button class="linkbtn" id="cOpen" style="margin:0 0 10px">🎨 貼紙顏色設定</button>
     <div class="cpanel" id="cPanel" hidden>
       <div class="meta" style="margin-bottom:6px">貼紙顏色＝訂貨日的星期。先把 7 種貼紙各校正一次（用平常包貨的燈光）。</div>
@@ -483,7 +484,7 @@ body.camOn{overflow:hidden}
   }
   let stage='scan', sessionList=[];
   function renderRecent(){
-    $('recent').innerHTML = sessionList.length ? '<div class="hd">剛剛登記</div>'+sessionList.slice(0,6).map(x=>'<li><span class="badge" style="--c:'+sizeColor(x.size)+'">'+esc(sizeLbl(x.size))+'</span><span class="c">'+esc(x.code)+'</span><span class="d">'+md(x.date)+'</span></li>').join('') : '';
+    $('recent').innerHTML = sessionList.length ? '<div class="hd">剛剛登記</div>'+sessionList.slice(0,6).map(x=>'<li><span class="badge" style="--c:'+sizeColor(x.size)+'">'+esc(sizeLbl(x.size))+'</span><span class="c">'+esc(fmtCode(x.code))+'</span><span class="d">'+md(x.date)+'</span></li>').join('') : '';
   }
   function stepList(){
     if(camPurpose==='calib' || appMode==='look') return [];
@@ -499,7 +500,7 @@ body.camOn{overflow:hidden}
     const n = i>=0 && L.length>1 ? '<span class="num">'+(i+1)+'</span>' : '';
     let g1='', g2='';
     if(st==='scan'){ g1=n+(appMode==='look'?'掃條碼查詢':'對準傳票條碼');
-      g2 = appMode==='look' ? '馬上顯示出貨日和箱子尺寸' : !$('askEach').checked ? '自動存到 '+md(current)+'・'+esc(curSize) : '條碼放進白框，紅線會自動讀取'; }
+      g2 = appMode==='look' ? '馬上顯示出貨日和箱子尺寸' : !$('askEach').checked ? '自動存到 '+md(current)+'・'+esc(curSize) : ($('onlyTrack').checked?'對準「お問合せNo」上方的條碼':'條碼放進白框，紅線會自動讀取'); }
     else if(st==='color'){ g1=n+'移到日期貼紙'; g2='讓貼紙在圓圈裡，自動判斷顏色'; }
     else if(st==='size'){ g1=n+'選箱子尺寸'; g2=''; }
     else if(st==='calib'){ g1='校正 '+wdName(calibWd); g2='把貼紙放滿圓圈，按「取色」'; }
@@ -521,7 +522,7 @@ body.camOn{overflow:hidden}
   window.addEventListener('resize', ()=>{ if(camOn()) placeVF(); });
   function vfGot(){ const vf=$('vf'); vf.classList.add('got'); }
   async function addItem(code, date, size, order){
-    if(findCode(code).some(h=>h.date===date)){ say('「'+code+'」在 '+md(date)+' 已經登記過了','warn'); camToast('已經登記過', esc(code)+'<br>'+md(date), true); buzz([60,60,60]); return; }
+    if(findCode(code).some(h=>h.date===date)){ say('「'+code+'」在 '+md(date)+' 已經登記過了','warn'); camToast('已經登記過', esc(fmtCode(code))+'<br>'+md(date), true); buzz([60,60,60]); return; }
     const d = days[date] || (days[date]={date, items:[]});
     const t = new Date();
     const item = {id:Date.now().toString(36)+Math.random().toString(36).slice(2,6), code, size, order:order||'', note:'', t:pad(t.getHours())+':'+pad(t.getMinutes())};
@@ -529,7 +530,7 @@ body.camOn{overflow:hidden}
     freshId = item.id; buzz(80);
     say('已登記 '+code+' → '+md(date)+'・'+sizeLbl(size),'ok');
     sessionList.unshift({code,date,size,order}); renderRecent();
-    sessionN++; if(!sheetOpen) setTimeout(()=>{ if(camOn()&&!colorStep&&!sheetOpen) setStage('scan'); },700); camToast('✓ 已登記', esc(code)+'<br>'+md(date)+'　<span class="badge" style="--c:'+sizeColor(size)+'">'+esc(sizeLbl(size))+'</span>'); camInfo();
+    sessionN++; if(!sheetOpen) setTimeout(()=>{ if(camOn()&&!colorStep&&!sheetOpen) setStage('scan'); },700); camToast('✓ 已登記', esc(fmtCode(code))+'<br>'+md(date)+'　<span class="badge" style="--c:'+sizeColor(size)+'">'+esc(sizeLbl(size))+'</span>'); camInfo();
     render();
     await persist(date);
   }
@@ -558,8 +559,21 @@ body.camOn{overflow:hidden}
 
   /* ---------- scan handling ---------- */
   let lastCode='', lastAt=0, sheetOpen=false, pending=null;
-  function onCode(raw){
-    const code=String(raw||'').trim(); if(!code) return;
+  // 傳票上有很多條碼，只留下 12 碼追蹤號碼（佐川・ヤマト：前 11 碼 mod 7 = 第 12 碼）
+  function normCode(raw){
+    let c=String(raw||'').toUpperCase().replace(/[\s\-]/g,'');
+    const m=c.match(/^[A-D](\d+)[A-D]$/); if(m) c=m[1];
+    return c;
+  }
+  function isTrack(c){ return /^\d{12}$/.test(c) && (+c.slice(0,11))%7===+c[11]; }
+  window.fmtCode=c=>/^\d{12}$/.test(c)?c.slice(0,4)+'-'+c.slice(4,8)+'-'+c.slice(8):c;
+  let wrongAt=0;
+  function onCode(raw, manual){
+    let code=normCode(raw); if(!code) return;
+    if($('onlyTrack').checked && !isTrack(code)){
+      if(manual){ say('「'+raw+'」不是 12 碼追蹤號碼，已照輸入登記','warn'); }
+      else { const n=Date.now(); if(n-wrongAt>2500){ wrongAt=n; $('camSub').innerHTML='<span style="color:#ffb4a8">讀到其他條碼，請對準「お問合せNo」上方的條碼</span>'; setTimeout(()=>{ if(stage==='scan') setStage('scan'); },2500); } return; }
+    }
     const now=Date.now(); if(code===lastCode && now-lastAt<3000) return;
     if(sheetOpen) return;
     lastCode=code; lastAt=now;
@@ -573,11 +587,11 @@ body.camOn{overflow:hidden}
     box.classList.add('on');
     if(!hits.length){
       box.className='lookup on miss';
-      box.innerHTML='<div class="code">'+esc(code)+'</div><div class="big"><div class="bd">沒有登記</div></div><div class="meta">切到「登記傳票」可以加入</div>';
+      box.innerHTML='<div class="code">'+esc(fmtCode(code))+'</div><div class="big"><div class="bd">沒有登記</div></div><div class="meta">切到「登記傳票」可以加入</div>';
       buzz([60,60,60]); if(camOn()){ const c=$('cam'); c.classList.remove('hit','bad'); void c.offsetWidth; c.classList.add('bad'); setTimeout(()=>c.classList.remove('bad'),800); } return;
     }
     box.className='lookup on';
-    box.innerHTML='<div class="code">'+esc(code)+'</div>'+hits.map(h=>{
+    box.innerHTML='<div class="code">'+esc(fmtCode(code))+'</div>'+hits.map(h=>{
       const late = h.date<TODAY ? '<div class="meta" style="color:var(--stamp)">出貨日已過</div>' : (h.date===TODAY?'<div class="meta" style="color:var(--stamp)">今天出貨</div>':'');
       return '<div class="big"><div class="bd">'+md(h.date)+'</div><div class="bs" style="--c:'+sizeColor(h.item.size)+'">'+esc(sizeLbl(h.item.size))+'</div></div>'+late+
         (h.item.note?'<div class="meta">'+esc(h.item.note)+'</div>':'');
@@ -595,7 +609,7 @@ body.camOn{overflow:hidden}
     $('shAuto').textContent = auto ? '　自動判斷：'+wdName(parse(order).getDay()) : '';
     sheetOpen=true; buzz(80);
     if(camOn()){ const c=$('cam'); c.classList.remove('hit','bad'); void c.offsetWidth; c.classList.add('hit'); setTimeout(()=>c.classList.remove('hit'),800); }
-    $('shCode').textContent=code;
+    $('shCode').textContent=fmtCode(code);
     const hits=findCode(code);
     $('shWarn').textContent = hits.length ? '已登記在：'+hits.map(h=>md(h.date)+' '+sizeLbl(h.item.size)).join('、') : '';
     $('shDate').value=pending.date;
@@ -633,7 +647,7 @@ body.camOn{overflow:hidden}
   function slipHTML(it,date,search){
     const c=sizeColor(it.size);
     let h='<li class="slip'+(it.id===freshId?' flash':'')+'" style="--c:'+c+'" data-date="'+date+'" data-id="'+it.id+'">'+
-      '<div><div class="code">'+esc(it.code)+'</div><div class="meta">'+(search?md(date)+'　':'')+'<span class="badge" style="--c:'+c+'">'+esc(sizeLbl(it.size))+'</span>'+(it.order?'　訂 '+md(it.order):'')+'　'+esc(it.t||'')+'</div></div>';
+      '<div><div class="code">'+esc(fmtCode(it.code))+'</div><div class="meta">'+(search?md(date)+'　':'')+'<span class="badge" style="--c:'+c+'">'+esc(sizeLbl(it.size))+'</span>'+(it.order?'　訂 '+md(it.order):'')+'　'+esc(it.t||'')+'</div></div>';
     if(search){
       h+='<button class="jump" data-act="jump">看當天</button>'+(it.note?'<div class="full meta">'+esc(it.note)+'</div>':'');
     } else {
@@ -693,7 +707,7 @@ body.camOn{overflow:hidden}
   }
 
   function renderFind(){
-    const q=$('q').value.trim().toLowerCase();
+    const q=$('q').value.trim().toLowerCase().replace(/[\s\-]/g,'');
     if(!q){ $('results').innerHTML='<p class="meta">也可以切到上方「包貨查詢」直接掃條碼查</p>'; return; }
     let h='',n=0;
     Object.keys(days).sort().reverse().forEach(d=>{
@@ -734,7 +748,7 @@ body.camOn{overflow:hidden}
   $('tabMonth').onclick=()=>{ showTab('month'); renderMonth(); };
   $('tabFind').onclick=()=>{ showTab('find'); renderFind(); $('q').focus(); };
   $('q').oninput=renderFind;
-  $('addManual').onclick=()=>{ const v=$('manual').value; $('manual').value=''; lastCode=''; onCode(v); if(!sheetOpen) $('manual').focus(); };
+  $('addManual').onclick=()=>{ const v=$('manual').value; $('manual').value=''; lastCode=''; onCode(v,true); if(!sheetOpen) $('manual').focus(); };
 
   document.addEventListener('click',e=>{
     const t=e.target;
@@ -884,13 +898,16 @@ body.camOn{overflow:hidden}
   $('cOpen').onclick=()=>{ $('cPanel').hidden=!$('cPanel').hidden; renderColors(); };
   $('cAll').onclick=()=>{ calibAll=true; calibWd=1; startCamera('calib'); };
   $('cRows').onclick=e=>{ const b=e.target.closest('[data-cal]'); if(!b) return; calibAll=false; calibWd=+b.dataset.cal; startCamera('calib'); };
+  try{ const v=localStorage.getItem('slipOnlyTrack'); if(v!==null) $('onlyTrack').checked=v==='1'; }catch(_){}
+  $('onlyTrack').onchange=()=>{ try{ localStorage.setItem('slipOnlyTrack',$('onlyTrack').checked?'1':'0'); }catch(_){} };
   $('cAuto').onchange=()=>{ try{ localStorage.setItem('slipCAuto', $('cAuto').checked?'1':'0'); }catch(_){} };
   $('cOff').onchange=()=>{ try{ localStorage.setItem('slipOff', $('cOff').value.trim()); }catch(_){}
     if(mode==='db' && rtdb) rtdb.ref(ROOT+'/shipOffset').set($('cOff').value.trim()).catch(()=>{}); };
   renderColors();
   function confirmRead(text){
     const now=Date.now();
-    if(text===candCode && now-candAt<1500){ candCode=''; vfGot(); onCode(text); }
+    if($('onlyTrack').checked && !isTrack(normCode(text))){ onCode(text); return; } // 其他條碼：只提示，不影響確認
+    if(text===candCode && now-candAt<2500){ candCode=''; vfGot(); onCode(text); }
     else { candCode=text; candAt=now; }
   }
   $('scan').onclick=()=>startCamera('scan');
