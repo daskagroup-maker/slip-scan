@@ -494,18 +494,56 @@ body.camOn{overflow:hidden}
   function ocrWarm(){
     if(!ocrOn() || ocrLoading) return ocrLoading;
     ocrLoading = Tesseract.createWorker('jpn', 1, {logger:()=>{}}).then(async w=>{
-      await w.setParameters({tessedit_pageseg_mode:'11'}); ocrWorker=w; return w;
+      await w.setParameters({tessedit_pageseg_mode:'3'}); ocrWorker=w; return w;
     }).catch(e=>{ ocrLoading=null; throw e; });
     return ocrLoading;
   }
   function grabFrame(){
     const v=$('reader').querySelector('video'); if(!v||!v.videoWidth) return null;
     const c=document.createElement('canvas'); c.width=v.videoWidth; c.height=v.videoHeight;
-    const g=c.getContext('2d'); g.drawImage(v,0,0);
-    // grayscale + contrast
-    const im=g.getImageData(0,0,c.width,c.height), d=im.data;
-    for(let i=0;i<d.length;i+=4){ let y=0.299*d[i]+0.587*d[i+1]+0.114*d[i+2]; y=Math.max(0,Math.min(255,(y-128)*1.5+128)); d[i]=d[i+1]=d[i+2]=y; }
-    g.putImageData(im,0,0); return c;
+    c.getContext('2d').drawImage(v,0,0); return c;
+  }
+  // pure functions shared with app
+  function maskBarcodes(g,w,h){
+    // g: Uint8ClampedArray gray. returns {g2, vert} vert=true if bars run horizontally (image rotated)
+    const hist=new Uint32Array(256); for(let i=0;i<g.length;i++) hist[g[i]]++;
+    const pct=p=>{ let c=0,t=g.length*p; for(let v=0;v<256;v++){ c+=hist[v]; if(c>=t) return v; } return 255; };
+    const th=(pct(0.05)+pct(0.95))/2;
+    const th_=new Float32Array(w*h), tv_=new Float32Array(w*h);
+    for(let y=0;y<h;y++) for(let x=0;x<w;x++){ const i=y*w+x, b=g[i]<th;
+      if(x+1<w && (g[i+1]<th)!==b) th_[i]=1; if(y+1<h && (g[i+w]<th)!==b) tv_[i]=1; }
+    const blur=(a,R)=>{ const W=w+1, I=new Float64Array(W*(h+1));
+      for(let y=0;y<h;y++){ let s=0; for(let x=0;x<w;x++){ s+=a[y*w+x]; I[(y+1)*W+x+1]=I[y*W+x+1]+s; } }
+      const o=new Float32Array(w*h);
+      for(let y=0;y<h;y++){ const y0=Math.max(0,y-R), y1=Math.min(h,y+R+1);
+        for(let x=0;x<w;x++){ const x0=Math.max(0,x-R), x1=Math.min(w,x+R+1);
+          o[y*w+x]=(I[y1*W+x1]-I[y0*W+x1]-I[y1*W+x0]+I[y0*W+x0])/((y1-y0)*(x1-x0)); } }
+      return o; };
+    const R=Math.max(10,Math.round(Math.max(w,h)/68));   // ~20px window at 1366
+    const dh=blur(th_,R), dv=blur(tv_,R);
+    const hi=new Float32Array(w*h); let sh=0, sv=0;
+    for(let i=0;i<w*h;i++){ const m=Math.max(dh[i],dv[i]); if(m>0.12){ hi[i]=1; sh+=dh[i]; sv+=dv[i]; } }
+    const hm=blur(hi,Math.round(R*0.4));
+    const g2=new Uint8ClampedArray(g); for(let i=0;i<w*h;i++) if(hm[i]>0.3) g2[i]=255;
+    return {g2, vert: sv>sh*1.3};
+  }
+  // 縮到長邊 2000 → 灰階 → 把條碼塗白（條碼會干擾文字辨識）→ 判斷是否轉了 90 度
+  function prepOCR(src){
+    const sw=src.width, sh=src.height, k=Math.min(1, 2000/Math.max(sw,sh));
+    const w=Math.round(sw*k), h=Math.round(sh*k);
+    const c=document.createElement('canvas'); c.width=w; c.height=h; const x=c.getContext('2d');
+    x.drawImage(src,0,0,w,h);
+    const im=x.getImageData(0,0,w,h), d=im.data, g=new Uint8ClampedArray(w*h);
+    for(let i=0;i<w*h;i++) g[i]=0.299*d[i*4]+0.587*d[i*4+1]+0.114*d[i*4+2];
+    const r=maskBarcodes(g,w,h);
+    for(let i=0;i<w*h;i++){ d[i*4]=d[i*4+1]=d[i*4+2]=r.g2[i]; }
+    x.putImageData(im,0,0);
+    return {c, vert:r.vert};
+  }
+  function rotated(c,deg){
+    if(!deg) return c;
+    const o=document.createElement('canvas'); o.width=c.height; o.height=c.width; const x=o.getContext('2d');
+    x.translate(o.width/2,o.height/2); x.rotate(deg*Math.PI/180); x.drawImage(c,-c.width/2,-c.height/2); return o;
   }
   function pickDate(text){
     const t=String(text||'').replace(/\s+/g,'').replace(/[Oo]/g,'0').replace(/[Il|]/g,'1');
@@ -518,7 +556,7 @@ body.camOn{overflow:hidden}
       const dt=new Date(y,mo-1,da); if(dt.getMonth()!==mo-1) continue;
       if(Math.abs(dt-now) > 400*864e5) continue;
       const k=ymd(dt);
-      sc[k]=(sc[k]||0) + 1 + (/送|発[送达]/.test(before) && !/行/.test(before) ? 3 : 0);   // 「発送日」優先
+      sc[k]=(sc[k]||0) + 1 + (/送|発[送达]|出荷|荷日/.test(before) && !/行/.test(before) ? 3 : 0);   // 「発送日・出荷日」優先
     }
     const ks=Object.keys(sc); if(!ks.length) return null;
     ks.sort((a,b)=>sc[b]-sc[a] || (a<b?-1:1));                    // 分數高、同分取最早（有効期限較晚）
@@ -530,8 +568,14 @@ body.camOn{overflow:hidden}
     ocrJobs[code]={status:'run'}; renderSum();
     try{
       const w = ocrWorker || await ocrWarm();
-      const {data} = await w.recognize(src);
-      const d = pickDate(data.text);
+      const P = prepOCR(src);
+      const order = P.vert ? [90,-90] : [0, 90, -90];
+      let d=null;
+      for(const deg of order){
+        const {data} = await w.recognize(rotated(P.c,deg));
+        d = pickDate(data.text); if(d) break;
+        if(!P.vert && deg===0 && /[\u3040-\u30ff\u4e00-\u9fff]{4,}/.test(data.text)) break;   // 正向已讀到文字但沒日期，就不用再轉
+      }
       ocrJobs[code] = d ? {status:'ok', date:d} : {status:'fail'};
     }catch(e){ ocrJobs[code]={status:'fail', err:String(e&&e.message||e)}; }
     applyOcr(code);
@@ -558,6 +602,7 @@ body.camOn{overflow:hidden}
     if(pending.src!=='ocr' && j){ extra = j.status==='run' ? '<span class="src run">📄 讀取傳票日期中…</span>' : j.status==='fail' ? '<span class="src">📄 讀不到傳票日期</span>' : ''; }
     $('shSum').innerHTML='出貨日 '+md(pending.date)+'<span class="src">'+srcTxt+'</span>'+extra;
   }
+  window.slipDebug={prepOCR, rotated, pickDate, ocrWarm};
   try{ const v=localStorage.getItem('slipOcr'); if(v!==null) $('ocrDate').checked=v==='1'; }catch(_){}
   $('ocrDate').onchange=()=>{ try{ localStorage.setItem('slipOcr',$('ocrDate').checked?'1':'0'); }catch(_){} if($('ocrDate').checked) ocrWarm(); };
 
