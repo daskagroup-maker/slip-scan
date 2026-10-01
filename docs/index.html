@@ -426,7 +426,9 @@ body.camOn{overflow:hidden}
   const ROOT='slipScan';
   // 每張傳票各自一筆（days/日期/items/id）→ 多人同時登記不會互相覆蓋
   const itemPath=(date,id)=>'days/'+date+'/items/'+id;
-  const cleanOne=i=>({id:i.id, code:i.code, size:i.size||'', order:i.order||'', note:i.note||'', t:i.t||''});
+  const cleanOne=i=>({id:i.id, code:i.code, size:i.size||'', order:i.order||'', note:i.note||'', t:i.t||'', ts:i.ts||0});
+  const tsOf=i=>i.ts || parseInt(String(i.id).slice(0,8),36) || 0;
+  const keyOf=code=>'c_'+String(code).replace(/[.#$\[\]\/\s]/g,'_');   // 用追蹤號碼當 key：兩台同時掃同一張只會有一筆
   let Q=[]; try{ Q=JSON.parse(localStorage.getItem('slipQ')||'[]'); }catch(_){ Q=[]; }
   const saveQ=()=>{ try{ localStorage.setItem('slipQ', JSON.stringify(Q)); }catch(_){} };
   let cloudCfg=false, flushing=false;
@@ -452,7 +454,7 @@ body.camOn{overflow:hidden}
       const d=m[1], id=m[2], day=next[d]||(next[d]={date:d,items:[]});
       day.items=day.items.filter(i=>i.id!==id); if(op.v) day.items.push(Object.assign({},op.v));
       if(!day.items.length) delete next[d]; });
-    Object.values(next).forEach(day=>day.items.sort((a,b)=>a.id<b.id?1:-1));
+    Object.values(next).forEach(day=>day.items.sort((a,b)=>tsOf(b)-tsOf(a)));
     return next;
   }
   async function persistSizes(){
@@ -672,16 +674,41 @@ body.camOn{overflow:hidden}
   setInterval(()=>{ if(camOn()) placeVF(); }, 500);
   window.addEventListener('resize', ()=>{ if(camOn()) placeVF(); });
   function vfGot(){ const vf=$('vf'); vf.classList.add('got'); }
-  async function addItem(code, date, size, order){
-    if(findCode(code).some(h=>h.date===date)){ say('「'+code+'」在 '+md(date)+' 已經登記過了','warn'); camToast('已經登記過', esc(fmtCode(code))+'<br>'+md(date), true); buzz([60,60,60]); return; }
+  function doneToast(title, code, date, size){
+    buzz(80);
+    sessionN++; if(!sheetOpen) setTimeout(()=>{ if(camOn()&&!colorStep&&!sheetOpen) setStage('scan'); },700);
+    camToast(title, esc(fmtCode(code))+'<br>'+md(date)+'　<span class="badge" style="--c:'+sizeColor(size)+'">'+esc(sizeLbl(size))+'</span>'); camInfo();
+  }
+  // explicit=true：從尺寸選單儲存（使用者確認過）→ 已存在就更新；連續掃描模式則不動舊資料
+  async function addItem(code, date, size, order, explicit){
+    const hits=findCode(code), same=hits.find(h=>h.date===date);
+    if(same){
+      if(explicit && (same.item.size!==size || (order && same.item.order!==order))){
+        same.item.size=size; if(order) same.item.order=order; freshId=same.item.id;
+        say('已更新 '+fmtCode(code)+' → '+sizeLbl(size),'ok'); doneToast('✓ 已更新', code, date, size); render(); putItem(date,same.item);
+      } else { say('「'+fmtCode(code)+'」在 '+md(date)+' 已經登記過了','warn'); camToast('已經登記過', esc(fmtCode(code))+'<br>'+md(date), true); buzz([60,60,60]); }
+      return;
+    }
+    if(hits.length){
+      if(!explicit){ say('「'+fmtCode(code)+'」已登記在 '+hits.map(h=>md(h.date)).join('、')+'，沒有變更','warn'); camToast('已登記在 '+md(hits[0].date), esc(fmtCode(code))+'<br>沒有變更', true); buzz([60,60,60]); return; }
+      const h=hits[0], it=h.item, from=h.date;
+      days[from].items=days[from].items.filter(i=>i!==it); if(!days[from].items.length) delete days[from];
+      hits.slice(1).forEach(x=>{ days[x.date].items=days[x.date].items.filter(i=>i!==x.item); if(!days[x.date].items.length) delete days[x.date]; delItem(x.date,x.item.id); });
+      it.size=size; if(order) it.order=order; it.ts=Date.now();
+      (days[date]||(days[date]={date,items:[]})).items.unshift(it); freshId=it.id;
+      say('已把 '+fmtCode(code)+' 從 '+md(from)+' 改到 '+md(date),'ok');
+      sessionList.unshift({code,date,size,order}); renderRecent();
+      doneToast('✓ 已改到 '+md(date), code, date, size); render();
+      delItem(from,it.id); putItem(date,it); return;
+    }
     const d = days[date] || (days[date]={date, items:[]});
     const t = new Date();
-    const item = {id:Date.now().toString(36)+Math.random().toString(36).slice(2,6), code, size, order:order||'', note:'', t:pad(t.getHours())+':'+pad(t.getMinutes())};
+    const item = {id:keyOf(code), code, size, order:order||'', note:'', t:pad(t.getHours())+':'+pad(t.getMinutes()), ts:Date.now()};
     d.items.unshift(item);
-    freshId = item.id; buzz(80);
-    say('已登記 '+code+' → '+md(date)+'・'+sizeLbl(size),'ok');
+    freshId = item.id;
+    say('已登記 '+fmtCode(code)+' → '+md(date)+'・'+sizeLbl(size),'ok');
     sessionList.unshift({code,date,size,order}); renderRecent();
-    sessionN++; if(!sheetOpen) setTimeout(()=>{ if(camOn()&&!colorStep&&!sheetOpen) setStage('scan'); },700); camToast('✓ 已登記', esc(fmtCode(code))+'<br>'+md(date)+'　<span class="badge" style="--c:'+sizeColor(size)+'">'+esc(sizeLbl(size))+'</span>'); camInfo();
+    doneToast('✓ 已登記', code, date, size);
     render();
     putItem(date,item);
   }
@@ -766,7 +793,7 @@ body.camOn{overflow:hidden}
     if(camOn()){ const c=$('cam'); c.classList.remove('hit','bad'); void c.offsetWidth; c.classList.add('hit'); setTimeout(()=>c.classList.remove('hit'),800); }
     $('shCode').textContent=fmtCode(code);
     const hits=findCode(code);
-    $('shWarn').textContent = hits.length ? '已登記在：'+hits.map(h=>md(h.date)+' '+sizeLbl(h.item.size)).join('、') : '';
+    $('shWarn').textContent = hits.length ? '⚠ 已登記在 '+hits.map(h=>md(h.date)+'・'+sizeLbl(h.item.size)).join('、')+'，儲存會改成這次選的日期和尺寸' : '';
     $('shDate').value=pending.date;
     renderSheet(); renderSum();
     if(camOn()){ const r=$('cam').querySelector('.cambody').getBoundingClientRect(); $('sheet').style.setProperty('--sheetTop', Math.round(r.bottom)+'px'); $('sheet').classList.add('incam'); } else $('sheet').classList.remove('incam');
@@ -799,10 +826,13 @@ body.camOn{overflow:hidden}
     return keys.map(k=>'<span><span class="badge" style="--c:'+sizeColor(k)+'">'+esc(sizeLbl(k))+'</span> ×'+counts[k]+'</span>').join('');
   }
 
+  let dupIdx={};
+  function buildDup(){ dupIdx={}; for(const d in days) for(const i of days[d].items) (dupIdx[i.code]=dupIdx[i.code]||[]).push(d); }
   function slipHTML(it,date,search){
     const c=sizeColor(it.size);
+    const others=(dupIdx[it.code]||[]).filter(d=>d!==date);
     let h='<li class="slip'+(it.id===freshId?' flash':'')+'" style="--c:'+c+'" data-date="'+date+'" data-id="'+it.id+'">'+
-      '<div><div class="code">'+esc(fmtCode(it.code))+'</div><div class="meta">'+(search?md(date)+'　':'')+'<span class="badge" style="--c:'+c+'">'+esc(sizeLbl(it.size))+'</span>'+(it.order?'　訂 '+md(it.order):'')+'　'+esc(it.t||'')+'</div></div>';
+      '<div><div class="code">'+esc(fmtCode(it.code))+'</div><div class="meta">'+(search?md(date)+'　':'')+'<span class="badge" style="--c:'+c+'">'+esc(sizeLbl(it.size))+'</span>'+(it.order?'　訂 '+md(it.order):'')+'　'+esc(it.t||'')+(others.length?'<br><b style="color:var(--stamp)">⚠ 重複：也在 '+others.map(md).join('、')+'</b>':'')+'</div></div>';
     if(search){
       h+='<button class="jump" data-act="jump">看當天</button>'+(it.note?'<div class="full meta">'+esc(it.note)+'</div>':'');
     } else {
@@ -815,6 +845,7 @@ body.camOn{overflow:hidden}
   }
 
   function render(){
+    buildDup();
     // stamp + date
     const dt=parse(current), s=$('stamp');
     s.querySelector('.m').textContent=(dt.getMonth()+1)+'月';
@@ -925,7 +956,7 @@ body.camOn{overflow:hidden}
       const p=pending; curSize=shs.dataset.shs; try{localStorage.setItem('slipCurSize',curSize);}catch(_){ }
       current=p.date; month=p.date.slice(0,7);
       savedSrc[p.code]={date:p.date, src:p.src};
-      closeSheet(); showTab('day'); addItem(p.code,p.date,curSize,p.order); return;
+      closeSheet(); showTab('day'); addItem(p.code,p.date,curSize,p.order,true); return;
     }
     const cell=t.closest('[data-cell]'); if(cell){ const [d,s]=cell.dataset.cell.split('|'); cellSel={date:d,size:s}; renderMonth(); $('cell').scrollIntoView({block:'nearest'}); return; }
     const b=t.closest('[data-act]'); if(!b) return;
