@@ -424,14 +424,36 @@ body.camOn{overflow:hidden}
   function saveLocal(){ try{ localStorage.setItem('slipDays', JSON.stringify(days)); localStorage.setItem('slipSizes', JSON.stringify(sizes)); }catch(e){} }
 
   const ROOT='slipScan';
-  const clean=items=>items.map(i=>({id:i.id, code:i.code, size:i.size||'', order:i.order||'', note:i.note||'', t:i.t||''}));
-  async function persist(date){
+  // 每張傳票各自一筆（days/日期/items/id）→ 多人同時登記不會互相覆蓋
+  const itemPath=(date,id)=>'days/'+date+'/items/'+id;
+  const cleanOne=i=>({id:i.id, code:i.code, size:i.size||'', order:i.order||'', note:i.note||'', t:i.t||''});
+  let Q=[]; try{ Q=JSON.parse(localStorage.getItem('slipQ')||'[]'); }catch(_){ Q=[]; }
+  const saveQ=()=>{ try{ localStorage.setItem('slipQ', JSON.stringify(Q)); }catch(_){} };
+  let cloudCfg=false, flushing=false;
+  function dbOp(path,val){
     saveLocal();
-    if(mode!=='db') return;
-    const doc=days[date];
-    try{
-      await rtdb.ref(ROOT+'/days/'+date).set(doc&&doc.items.length ? {items:clean(doc.items)} : null);
-    }catch(e){ say('儲存失敗：'+(e.code||e.message)+'（請檢查資料庫規則）','warn'); }
+    if(!cloudCfg) return;
+    Q.push({p:path, v:val==null?null:val}); saveQ(); setSync(); flush();
+  }
+  async function flush(){
+    if(mode!=='db' || !rtdb || flushing) return; flushing=true;
+    while(Q.length){
+      const op=Q[0];
+      try{ await rtdb.ref(ROOT+'/'+op.p).set(op.v); Q.shift(); saveQ(); }
+      catch(e){ say('儲存失敗：'+(e.code||e.message)+'（請檢查資料庫規則）','warn'); break; }
+      setSync();
+    }
+    flushing=false; setSync();
+  }
+  const putItem=(date,it)=>dbOp(itemPath(date,it.id), cleanOne(it));
+  const delItem=(date,id)=>dbOp(itemPath(date,id), null);
+  function applyQ(next){
+    Q.forEach(op=>{ const m=op.p.match(/^days\/([^/]+)\/items\/(.+)$/); if(!m) return;
+      const d=m[1], id=m[2], day=next[d]||(next[d]={date:d,items:[]});
+      day.items=day.items.filter(i=>i.id!==id); if(op.v) day.items.push(Object.assign({},op.v));
+      if(!day.items.length) delete next[d]; });
+    Object.values(next).forEach(day=>day.items.sort((a,b)=>a.id<b.id?1:-1));
+    return next;
   }
   async function persistSizes(){
     saveLocal();
@@ -444,22 +466,27 @@ body.camOn{overflow:hidden}
     loadLocal(); render();
     const cfg=window.FIREBASE_CONFIG||{};
     if(!window.firebase || !cfg.apiKey || !cfg.databaseURL){ setSync(); return; }
+    cloudCfg=true;
     try{
       firebase.initializeApp(cfg);
       try{ await firebase.auth().signInAnonymously(); }catch(_){ /* 規則不需登入時可略過 */ }
       rtdb=firebase.database(); mode='db';
     }catch(e){ say('雲端連線失敗，先存在本機：'+(e.code||e.message),'warn'); setSync(); return; }
-    rtdb.ref('.info/connected').on('value',s=>{ online=!!s.val(); setSync(); });
+    rtdb.ref('.info/connected').on('value',s=>{ online=!!s.val(); setSync(); if(online) flush(); });
     const localDays=Object.keys(days); let first=true;
     rtdb.ref(ROOT+'/days').on('value',snap=>{
       const v=snap.val()||{}, next={};
-      Object.keys(v).forEach(d=>{ const it=v[d]&&v[d].items; const arr=Array.isArray(it)?it:(it?Object.values(it):[]); if(arr.length) next[d]={date:d, items:arr.map(i=>Object.assign({},i))}; });
+      Object.keys(v).forEach(d=>{
+        const it=v[d]&&v[d].items; const arr=(Array.isArray(it)?it:(it?Object.values(it):[])).filter(Boolean);
+        if(Array.isArray(it) && arr.length){ const obj={}; arr.forEach(i=>{ obj[i.id]=cleanOne(i); }); rtdb.ref(ROOT+'/days/'+d+'/items').set(obj).catch(()=>{}); }   // 舊格式轉換
+        if(arr.length) next[d]={date:d, items:arr.map(i=>Object.assign({},i))};
+      });
       if(first){
         first=false;
-        const toPush=localDays.filter(d=>!next[d]);
-        if(toPush.length){ toPush.forEach(d=>{ next[d]=days[d]; }); days=next; toPush.forEach(d=>persist(d)); say('已把本機的 '+toPush.length+' 天資料上傳雲端','ok'); }
+        const toPush=localDays.filter(d=>!next[d] && !Q.some(op=>op.p.startsWith('days/'+d+'/')));
+        if(toPush.length){ toPush.forEach(d=>(days[d]?days[d].items:[]).forEach(i=>putItem(d,i))); say('已把本機的 '+toPush.length+' 天資料上傳雲端','ok'); }
       }
-      days=next; saveLocal(); render();
+      days=applyQ(next); saveLocal(); render();
     }, e=>{ say('雲端讀取失敗：'+(e.code||e.message)+'（請檢查資料庫規則）','warn'); mode='local'; setSync(); });
     rtdb.ref(ROOT+'/colors').on('value',s=>{
       const v=s.val(); if(v && typeof v==='object'){ let changed=false;
@@ -472,7 +499,7 @@ body.camOn{overflow:hidden}
       if(list&&list.length){ sizes=list.map(String); if(!sizes.includes(curSize)) curSize=sizes[0]; saveLocal(); render(); }
     }, ()=>{});
   }
-  function setSync(cached){ $('syncState').textContent = mode==='db' ? (online?'已同步雲端':'離線中，連線後自動同步') : '儲存在這台裝置'; }
+  function setSync(cached){ $('syncState').textContent = mode==='db' ? (Q.length ? '⏳ '+Q.length+' 筆等待上傳'+(online?'…':'（離線中）') : online?'✓ 已同步雲端':'離線中，連線後自動同步') : '儲存在這台裝置'; }
 
   /* ---------- data ops ---------- */
   function findCode(code){
@@ -656,29 +683,29 @@ body.camOn{overflow:hidden}
     sessionList.unshift({code,date,size,order}); renderRecent();
     sessionN++; if(!sheetOpen) setTimeout(()=>{ if(camOn()&&!colorStep&&!sheetOpen) setStage('scan'); },700); camToast('✓ 已登記', esc(fmtCode(code))+'<br>'+md(date)+'　<span class="badge" style="--c:'+sizeColor(size)+'">'+esc(sizeLbl(size))+'</span>'); camInfo();
     render();
-    await persist(date);
+    putItem(date,item);
   }
   async function removeItem(date,id){
     const d=days[date]; if(!d) return;
     d.items=d.items.filter(i=>i.id!==id); if(!d.items.length) delete days[date];
-    render(); await persist(date);
+    render(); delItem(date,id);
   }
   async function patchItem(date,id,patch){
     const d=days[date]; if(!d) return; const it=d.items.find(i=>i.id===id); if(!it) return;
-    Object.assign(it,patch); render(); await persist(date);
+    Object.assign(it,patch); render(); putItem(date,it);
   }
   async function moveItem(from,id,to){
     if(!to||to===from) return;
     const d=days[from]; if(!d) return; const it=d.items.find(i=>i.id===id); if(!it) return;
     d.items=d.items.filter(i=>i.id!==id); if(!d.items.length) delete days[from];
     (days[to]||(days[to]={date:to,items:[]})).items.unshift(it);
-    freshId=it.id; render(); await persist(from); await persist(to);
+    freshId=it.id; render(); delItem(from,id); putItem(to,it);
     say('已移到 '+md(to),'ok');
   }
   const noteTimers={};
   function setNote(date,id,val){
     const it=days[date]&&days[date].items.find(i=>i.id===id); if(!it||it.note===val) return;
-    it.note=val; clearTimeout(noteTimers[date]); noteTimers[date]=setTimeout(()=>persist(date),600);
+    it.note=val; clearTimeout(noteTimers[it.id]); noteTimers[it.id]=setTimeout(()=>putItem(date,it),600);
   }
 
   /* ---------- scan handling ---------- */
