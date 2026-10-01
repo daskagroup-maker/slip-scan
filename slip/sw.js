@@ -1,5 +1,5 @@
 // 改版時把版本號 +1，手機就會抓新版
-const CACHE = 'slip-scan-v1';
+const CACHE = 'slip-scan-v2';
 const CORE = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png',
   'https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js'];
 
