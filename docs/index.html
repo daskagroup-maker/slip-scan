@@ -40,6 +40,7 @@
   --s0:#8FA9E6; --s1:#5DBB84; --s2:#E0A94A; --s3:#E8685E; --s4:#B195E6; --s5:#4FC2CC; --s6:#C8977A; --sx:#77808F;
 }
 *,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 body{margin:0;background:var(--paper);color:var(--ink);
   font-family:"Noto Sans TC","PingFang TC","Hiragino Sans","Microsoft JhengHei",system-ui,sans-serif;
@@ -88,21 +89,24 @@ input[type=date],input[type=month]{flex:1;min-width:0;padding:8px 10px;border:1p
 .manual button{padding:0 16px;border:0;border-radius:10px;background:var(--ink);color:var(--paper);font-weight:700}
 /* UI scale (camera video itself is not scaled) */
 :root{--z:1.3}
-.wrap,.sheetin,.camtop,.toastin,.camhint span,.camlook #lookup{zoom:var(--z)}
-.camlook{position:absolute;left:12px;right:12px;bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:3}
+.wrap,.sheetin,.camtop,.toastin,.guide-in,.camlook #lookup,.cbar-in{zoom:var(--z)}
+.camlook{}
 .camlook #lookup{margin:0 auto;max-width:440px}
 @media (max-width:480px){.stamp{width:60px;height:60px}.stamp .d{font-size:22px}.nav{width:34px}.datebar input[type=date]{padding:8px 4px;font-size:15px}}
 .zoomctl{display:flex;align-items:center;gap:4px}
 .zoomctl button{min-width:40px;padding:6px 8px!important}
 .zoomctl button[aria-pressed=true]{background:var(--ink)!important;color:var(--paper);border-color:var(--ink)!important}
 /* sticker color */
-.ctarget{position:absolute;left:50%;top:50%;width:84px;height:84px;margin:-42px 0 0 -42px;border-radius:50%;border:4px solid #fff;box-shadow:0 0 0 3px rgba(0,0,0,.5),inset 0 0 0 3px rgba(0,0,0,.5);z-index:2;pointer-events:none}
+.ctarget{position:absolute;left:50%;top:50%;width:76px;height:76px;margin:-38px 0 0 -38px;border-radius:50%;border:4px solid #fff;box-shadow:0 0 0 200vmax rgba(0,0,0,.5),inset 0 0 0 3px rgba(0,0,0,.4);z-index:2;pointer-events:none}
+.ctarget::before{content:"";position:absolute;inset:-14px;border-radius:50%;border:3px solid rgba(255,255,255,.7);animation:pulse 1.2s ease-out infinite}
+@keyframes pulse{from{transform:scale(.85);opacity:1}to{transform:scale(1.25);opacity:0}}
+@media (prefers-reduced-motion:reduce){.ctarget::before{animation:none}}
 .ctarget::after{content:"";position:absolute;left:50%;top:50%;width:8px;height:8px;margin:-4px;border-radius:50%;background:#fff}
-.cbar{position:absolute;left:0;right:0;bottom:calc(56px + env(safe-area-inset-bottom,0px));z-index:3;display:flex;justify-content:center;pointer-events:none}
+.cbar{display:flex;justify-content:center}
 .cbar-in{pointer-events:auto;background:rgba(20,25,35,.9);color:#fff;border-radius:14px;padding:10px 12px;display:flex;align-items:center;gap:10px;max-width:92vw}
 .cbar-in .sw{width:34px;height:34px;border-radius:50%;border:2px solid #fff;flex:none}
-.cbar-in .lb{font-weight:700;min-width:7em}
-.cbar-in button{border:0;border-radius:10px;padding:10px 14px;font-weight:700}
+.cbar-in .lb{font-weight:700;min-width:5.5em;white-space:nowrap}
+.cbar-in button{border:0;border-radius:10px;padding:10px 14px;font-weight:700;white-space:nowrap}
 .cbar-in .go{background:var(--ok);color:#fff}
 .cbar-in .sk{background:rgba(255,255,255,.18);color:#fff}
 .cchips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 10px}
@@ -130,19 +134,61 @@ input[type=date],input[type=month]{flex:1;min-width:0;padding:8px 10px;border:1p
 .camtop .n{flex:none;text-align:center;line-height:1.1}
 .camtop .n b{display:block;font-size:24px;font-variant-numeric:tabular-nums}
 .camtop .n span{font-size:11px;opacity:.8}
-.cambody{flex:1;position:relative;display:flex;align-items:center;overflow:hidden}
+.cambody{flex:0 0 36vh;position:relative;display:flex;align-items:center;overflow:hidden;background:#000}
+.campanel{flex:1;min-height:0;overflow-y:auto;background:#151a22;color:#fff;padding:14px 14px calc(14px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:12px}
+.recent{list-style:none;margin:0;padding:0;zoom:var(--z)}
+.recent li{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.06);margin-bottom:6px;font-variant-numeric:tabular-nums}
+.recent li .c{flex:1;min-width:0;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.recent li .d{font-size:13px;opacity:.75}
+.recent .hd{font-size:13px;opacity:.6;margin:0 0 6px}
+.sheet.incam{top:var(--sheetTop,50vh);max-height:none;border-radius:16px 16px 0 0}
 #reader{width:100%}
 #reader video{width:100%!important;height:auto!important}
 .cam::after{content:"";position:absolute;inset:0;pointer-events:none;border:0 solid var(--ok);transition:border-width .15s}
 .cam.hit::after{border-width:10px}
 .cam.bad::after{border-color:var(--stamp);border-width:10px}
-.toast{position:absolute;left:50%;top:18%;transform:translate(-50%,-10px);opacity:0;transition:opacity .15s,transform .15s;
+.toast{position:absolute;left:50%;top:8%;transform:translate(-50%,-10px);opacity:0;transition:opacity .15s,transform .15s;
   background:rgba(20,25,35,.88);color:#fff;border-radius:14px;padding:12px 18px;text-align:center;z-index:2;max-width:90%;pointer-events:none}
 .toast.on{opacity:1;transform:translate(-50%,0)}
-.toast .t1{font-size:30px;font-weight:900}
-.toast .t2{font-size:18px;opacity:.85;word-break:break-all}
+.toast .t1{font-size:22px;font-weight:900;white-space:nowrap}
+.toast .t2{font-size:15px;opacity:.85;word-break:break-all}
 .toast .badge{font-size:18px;padding:2px 10px}
-.camhint{position:absolute;left:0;right:0;bottom:calc(14px + env(safe-area-inset-bottom,0px));text-align:center;color:#fff;font-size:14px;text-shadow:0 1px 3px #000}
+#qr-shaded-region{display:none!important}
+#reader img,#reader__dashboard_section_csr{display:none!important}
+/* viewfinder */
+.vf{position:absolute;z-index:2;pointer-events:none;border-radius:14px;box-shadow:0 0 0 200vmax rgba(0,0,0,.55);transition:box-shadow .2s}
+.vf::before{content:"";position:absolute;inset:-3px;border-radius:16px;
+  background:
+   linear-gradient(#fff,#fff) top left/34px 5px, linear-gradient(#fff,#fff) top left/5px 34px,
+   linear-gradient(#fff,#fff) top right/34px 5px, linear-gradient(#fff,#fff) top right/5px 34px,
+   linear-gradient(#fff,#fff) bottom left/34px 5px, linear-gradient(#fff,#fff) bottom left/5px 34px,
+   linear-gradient(#fff,#fff) bottom right/34px 5px, linear-gradient(#fff,#fff) bottom right/5px 34px;
+  background-repeat:no-repeat}
+.vf::after{content:"";position:absolute;left:6%;right:6%;top:50%;height:3px;border-radius:2px;background:#ff3b30;box-shadow:0 0 12px 2px rgba(255,59,48,.8);animation:laser 1.6s ease-in-out infinite alternate}
+@keyframes laser{from{top:12%}to{top:88%}}
+.vf.got::before{background:
+   linear-gradient(var(--ok),var(--ok)) top left/34px 5px, linear-gradient(var(--ok),var(--ok)) top left/5px 34px,
+   linear-gradient(var(--ok),var(--ok)) top right/34px 5px, linear-gradient(var(--ok),var(--ok)) top right/5px 34px,
+   linear-gradient(var(--ok),var(--ok)) bottom left/34px 5px, linear-gradient(var(--ok),var(--ok)) bottom left/5px 34px,
+   linear-gradient(var(--ok),var(--ok)) bottom right/34px 5px, linear-gradient(var(--ok),var(--ok)) bottom right/5px 34px;background-repeat:no-repeat}
+.vf.got::after{display:none}
+@media (prefers-reduced-motion:reduce){.vf::after{animation:none}}
+/* big instruction */
+.guide{display:flex;justify-content:center}
+.guide-in{text-align:center;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.9);padding:0 14px}
+.guide-in .g1{font-size:24px;font-weight:900;line-height:1.25}
+.guide-in .g2{font-size:15px;opacity:.9;margin-top:2px}
+.guide-in .num{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:#fff;color:#111;font-size:18px;margin-right:8px;vertical-align:3px;text-shadow:none}
+/* steps */
+.camtop{flex-wrap:wrap;row-gap:6px}
+.steps{order:3;flex:1 0 100%;display:flex;justify-content:center;gap:6px;min-width:0}
+.camtop .ttl2{flex:1;text-align:center;font-weight:700;font-size:16px}
+.steps span{display:flex;align-items:center;gap:4px;font-size:13px;color:rgba(255,255,255,.55);padding:4px 8px;border-radius:999px;white-space:nowrap}
+.steps span b{display:inline-flex;width:20px;height:20px;border-radius:50%;align-items:center;justify-content:center;border:1.5px solid currentColor;font-size:12px}
+.steps span.on{background:#fff;color:#111;font-weight:700}
+.steps span.done{color:var(--ok)}
+.steps span.done b{background:var(--ok);border-color:var(--ok);color:#fff}
+.camtop .ttl{flex:1;text-align:center;font-weight:700}
 body.camOn{overflow:hidden}
 .msg{min-height:22px;margin:10px 2px 0;font-size:14px;color:var(--ink2)}
 .msg.warn{color:var(--stamp)} .msg.ok{color:var(--ok)}
@@ -260,16 +306,22 @@ body.camOn{overflow:hidden}
   <div class="cam" id="cam" role="dialog" aria-label="相機掃描">
     <div class="camtop">
       <button id="stop">✕ 結束</button>
-      <div class="info" id="camInfo"></div>
+      <div class="steps" id="steps"></div>
+      <div class="ttl2" id="camTtl"></div><div class="info" id="camInfo" hidden></div>
       <div class="n"><b id="camN">0</b><span>本次</span></div>
     </div>
     <div class="cambody">
       <div id="reader"></div>
       <div class="toast" id="toastBox"><div class="toastin" id="toast" aria-live="assertive"></div></div>
-      <div class="camhint"><span id="camHint">把條碼放進框內</span></div>
-      <div class="camlook" id="camLook"></div>
+      <div class="vf" id="vf"></div>
+
       <div class="ctarget" id="cTarget" hidden></div>
+    </div>
+    <div class="campanel" id="camPanel">
+      <div class="guide"><div class="guide-in"><div class="g1" id="camHint"></div><div class="g2" id="camSub"></div></div></div>
       <div class="cbar" id="cBar" hidden><div class="cbar-in"><span class="sw" id="cSw"></span><span class="lb" id="cLb"></span><button class="go" id="cGo">取色</button><button class="sk" id="cSk">跳過</button></div></div>
+      <div class="camlook" id="camLook"></div>
+      <ul class="recent" id="recent"></ul>
     </div>
   </div>
   <span id="lookHome" hidden></span><div class="lookup" id="lookup" role="status" aria-live="assertive"></div>
@@ -325,13 +377,13 @@ body.camOn{overflow:hidden}
   <div class="meta">剛掃到</div>
   <div class="code" id="shCode"></div>
   <div class="meta" id="shWarn" style="color:var(--stamp)"></div>
-  <div class="meta" style="margin-top:10px">訂貨日（貼紙）<span class="auto" id="shAuto"></span></div>
+  <div class="meta" style="margin-top:8px">點尺寸就儲存</div>
+  <div class="sizes" id="shSizes"></div>
+  <div class="meta" style="margin-top:6px">訂貨日（貼紙）<span class="auto" id="shAuto"></span></div>
   <div class="cchips" id="shColors"></div>
   <div class="meta">出貨日</div>
   <div class="row" style="margin-top:4px"><input type="date" id="shDate"></div>
   <div class="qd" id="shQuick"></div>
-  <div class="meta">點尺寸就儲存</div>
-  <div class="sizes" id="shSizes"></div>
   <button class="cancel" id="shCancel">不要登記這張</button>
 </div></div>
 
@@ -429,12 +481,45 @@ body.camOn{overflow:hidden}
     $('toastBox').classList.add('on'); const c=$('cam'); c.classList.remove('hit','bad'); void c.offsetWidth; c.classList.add(bad?'bad':'hit');
     clearTimeout(toastT); toastT=setTimeout(()=>{ $('toastBox').classList.remove('on'); c.classList.remove('hit','bad'); }, 1600);
   }
-  function camInfo(){
-    if(!camOn()) return;
-    $('camInfo').innerHTML = camPurpose==='calib' ? '<b>貼紙顏色校正</b><br>依序掃 7 種貼紙' : appMode==='look' ? '<b>包貨查詢</b><br>掃描後顯示出貨日和尺寸'
-      : '<b>登記傳票</b><br>'+($('askEach').checked ? '掃到後選日期和尺寸' : md(current)+'・<span class="badge" style="--c:'+sizeColor(curSize)+'">'+esc(curSize)+'</span>');
+  let stage='scan', sessionList=[];
+  function renderRecent(){
+    $('recent').innerHTML = sessionList.length ? '<div class="hd">剛剛登記</div>'+sessionList.slice(0,6).map(x=>'<li><span class="badge" style="--c:'+sizeColor(x.size)+'">'+esc(sizeLbl(x.size))+'</span><span class="c">'+esc(x.code)+'</span><span class="d">'+md(x.date)+'</span></li>').join('') : '';
+  }
+  function stepList(){
+    if(camPurpose==='calib' || appMode==='look') return [];
+    const L=['scan']; if(colorReady()) L.push('color'); if($('askEach').checked) L.push('size'); return L;
+  }
+  const STEP_NAME={scan:'條碼',color:'貼紙',size:'尺寸'};
+  function setStage(st){
+    stage=st; if(!camOn()) return;
+    const L=stepList(), i=L.indexOf(st);
+    $('steps').innerHTML = L.length>1 ? L.map((k,j)=>'<span class="'+(j===i?'on':j<i?'done':'')+'"><b>'+(j<i?'✓':j+1)+'</b>'+STEP_NAME[k]+'</span>').join('') : '';
+    $('steps').hidden = L.length<2;
+    $('camTtl').textContent = camPurpose==='calib'?'貼紙顏色校正':appMode==='look'?'包貨查詢':'登記傳票';
+    const n = i>=0 && L.length>1 ? '<span class="num">'+(i+1)+'</span>' : '';
+    let g1='', g2='';
+    if(st==='scan'){ g1=n+(appMode==='look'?'掃條碼查詢':'對準傳票條碼');
+      g2 = appMode==='look' ? '馬上顯示出貨日和箱子尺寸' : !$('askEach').checked ? '自動存到 '+md(current)+'・'+esc(curSize) : '條碼放進白框，紅線會自動讀取'; }
+    else if(st==='color'){ g1=n+'移到日期貼紙'; g2='讓貼紙在圓圈裡，自動判斷顏色'; }
+    else if(st==='size'){ g1=n+'選箱子尺寸'; g2=''; }
+    else if(st==='calib'){ g1='校正 '+wdName(calibWd); g2='把貼紙放滿圓圈，按「取色」'; }
+    $('camHint').innerHTML=g1; $('camSub').innerHTML=g2;
+    $('vf').hidden = !(st==='scan');
+    $('vf').classList.remove('got');
     $('camN').textContent=sessionN;
   }
+  function camInfo(){ setStage(stage); }
+  function placeVF(){
+    const v=$('reader').querySelector('video'); if(!v) return;
+    const body=$('reader').parentNode.getBoundingClientRect(), r=v.getBoundingClientRect();
+    if(!r.width) return;
+    const w=Math.floor(r.width*0.86), h=Math.floor(Math.min(r.height*0.35, r.width*0.42));
+    const vf=$('vf'); vf.style.width=w+'px'; vf.style.height=h+'px';
+    vf.style.left=(r.left-body.left+(r.width-w)/2)+'px'; vf.style.top=(r.top-body.top+(r.height-h)/2)+'px';
+  }
+  setInterval(()=>{ if(camOn()) placeVF(); }, 500);
+  window.addEventListener('resize', ()=>{ if(camOn()) placeVF(); });
+  function vfGot(){ const vf=$('vf'); vf.classList.add('got'); }
   async function addItem(code, date, size, order){
     if(findCode(code).some(h=>h.date===date)){ say('「'+code+'」在 '+md(date)+' 已經登記過了','warn'); camToast('已經登記過', esc(code)+'<br>'+md(date), true); buzz([60,60,60]); return; }
     const d = days[date] || (days[date]={date, items:[]});
@@ -443,7 +528,8 @@ body.camOn{overflow:hidden}
     d.items.unshift(item);
     freshId = item.id; buzz(80);
     say('已登記 '+code+' → '+md(date)+'・'+sizeLbl(size),'ok');
-    sessionN++; camToast('✓ 已登記', esc(code)+'<br>'+md(date)+'　<span class="badge" style="--c:'+sizeColor(size)+'">'+esc(sizeLbl(size))+'</span>'); camInfo();
+    sessionList.unshift({code,date,size,order}); renderRecent();
+    sessionN++; if(!sheetOpen) setTimeout(()=>{ if(camOn()&&!colorStep&&!sheetOpen) setStage('scan'); },700); camToast('✓ 已登記', esc(code)+'<br>'+md(date)+'　<span class="badge" style="--c:'+sizeColor(size)+'">'+esc(sizeLbl(size))+'</span>'); camInfo();
     render();
     await persist(date);
   }
@@ -514,10 +600,11 @@ body.camOn{overflow:hidden}
     $('shWarn').textContent = hits.length ? '已登記在：'+hits.map(h=>md(h.date)+' '+sizeLbl(h.item.size)).join('、') : '';
     $('shDate').value=pending.date;
     renderSheet();
-    $('sheet').classList.add('on');
+    if(camOn()){ const r=$('cam').querySelector('.cambody').getBoundingClientRect(); $('sheet').style.setProperty('--sheetTop', Math.round(r.bottom)+'px'); $('sheet').classList.add('incam'); } else $('sheet').classList.remove('incam');
+    $('sheet').classList.add('on'); setStage('size'); $('sheet').scrollTop=0;
     setTimeout(()=>{ const b=$('shSizes').querySelector('[aria-pressed=true]')||$('shSizes').querySelector('button'); b&&b.focus(); },50);
   }
-  function closeSheet(){ $('sheet').classList.remove('on'); sheetOpen=false; pending=null; lastCode=''; }
+  function closeSheet(){ $('sheet').classList.remove('on'); sheetOpen=false; pending=null; lastCode=''; if(camOn()) setStage('scan'); }
   function renderSheet(){
     // quick dates: next 14 days from today plus current
     const set=new Set();
@@ -735,11 +822,11 @@ body.camOn{overflow:hidden}
     $('cTarget').hidden=false; $('cBar').hidden=false; $('cLb').textContent=label;
     $('cGo').hidden=!btn; $('cGo').textContent=btn||'';
   }
-  function endColorUI(){ clearInterval(cTimer); cTimer=null; $('cTarget').hidden=true; $('cBar').hidden=true; $('camHint').textContent='把條碼放進框內'; }
+  function endColorUI(){ clearInterval(cTimer); cTimer=null; $('cTarget').hidden=true; $('cBar').hidden=true; if(camPurpose==='scan') setStage('scan'); }
 
   function startColorStep(code){
     colorStep={code, last:-1, n:0, t0:Date.now()};
-    $('camHint').textContent='把日期貼紙對準圓圈';
+    setStage('color');
     showColorUI('找貼紙中…', '');
     $('cSk').textContent='跳過';
     cTimer=setInterval(()=>{
@@ -764,7 +851,7 @@ body.camOn{overflow:hidden}
   /* calibration */
   function beginCalib(){
     if(calibWd===null) calibWd=1;
-    $('camHint').textContent='把貼紙放滿圓圈，再按「取色」';
+    setStage('calib');
     showColorUI('校正 '+wdName(calibWd), '取色'); $('cSk').textContent='下一個';
     clearInterval(cTimer);
     cTimer=setInterval(()=>{ const sm=sample(); if(sm) $('cSw').style.background='rgb('+sm.rgb.join(',')+')'; }, 150);
@@ -803,15 +890,15 @@ body.camOn{overflow:hidden}
   renderColors();
   function confirmRead(text){
     const now=Date.now();
-    if(text===candCode && now-candAt<1500){ candCode=''; onCode(text); }
+    if(text===candCode && now-candAt<1500){ candCode=''; vfGot(); onCode(text); }
     else { candCode=text; candAt=now; }
   }
   $('scan').onclick=()=>startCamera('scan');
   async function startCamera(purpose){
     camPurpose=purpose;
     if(typeof Html5Qrcode==='undefined'){ say('掃描元件載入失敗，請改用拍照或手動輸入','warn'); return; }
-    if(scanner){ if(purpose==='calib') beginCalib(); camInfo(); return; }
-    sessionN=0; $('cam').classList.add('on'); document.body.classList.add('camOn'); $('lookup').classList.remove('on'); $('camLook').appendChild($('lookup')); camInfo();
+    if(scanner){ if(purpose==='calib') beginCalib(); else { endColorUI(); setStage('scan'); } return; }
+    sessionN=0; sessionList=[]; renderRecent(); $('cam').classList.add('on'); document.body.classList.add('camOn'); $('lookup').classList.remove('on'); $('camLook').appendChild($('lookup')); camInfo();
     const F=Html5QrcodeSupportedFormats;
     scanner=new Html5Qrcode('reader',{verbose:false,experimentalFeatures:{useBarCodeDetectorIfSupported:true},
       formatsToSupport:[F.CODABAR,F.CODE_128,F.CODE_39,F.ITF,F.EAN_13,F.EAN_8,F.QR_CODE]});
@@ -819,7 +906,7 @@ body.camOn{overflow:hidden}
       await scanner.start({facingMode:'environment'},
         {fps:12,qrbox:(w,h)=>({width:Math.floor(w*0.86),height:Math.floor(Math.min(h*0.35,w*0.42))})},
         text=>{ if(camPurpose==='scan' && !colorStep) confirmRead(text); },()=>{});
-      $('camHint').textContent='把條碼放進框內';
+      setTimeout(placeVF,300); setStage('scan');
       if(purpose==='calib') beginCalib();
     }catch(err){ await stopScan(); say('無法開啟相機（可能沒有授權）。請改用「拍照辨識」或手動輸入。','warn'); }
   }
