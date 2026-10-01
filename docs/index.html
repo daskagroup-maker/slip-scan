@@ -105,7 +105,7 @@ body.batch .stamp{border-width:4px}
 .bdates button{flex:none;border:2px solid rgba(255,255,255,.25);background:transparent;color:#fff;border-radius:10px;padding:8px 12px;font-size:15px;font-variant-numeric:tabular-nums}
 .bdates button[aria-pressed=true]{background:#fff;color:#111;border-color:#fff;font-weight:900}
 .blabel{font-size:12px;opacity:.6;zoom:var(--z)}
-.sheet.batchmode #shMore{display:none}
+.sheet.batchmode #shMore>*:not(#shOrdWrap){display:none}
 /* sticker color */
 .ctarget{position:absolute;left:50%;top:50%;width:76px;height:76px;margin:-38px 0 0 -38px;border-radius:50%;border:4px solid #fff;box-shadow:0 0 0 200vmax rgba(0,0,0,.5),inset 0 0 0 3px rgba(0,0,0,.4);z-index:2;pointer-events:none}
 .ctarget::before{content:"";position:absolute;inset:-14px;border-radius:50%;border:3px solid rgba(255,255,255,.7);animation:pulse 1.2s ease-out infinite}
@@ -129,7 +129,10 @@ body.batch .stamp{border-width:4px}
 .crow:last-of-type{border-bottom:0}
 .crow i{width:30px;height:30px;border-radius:50%;border:1px solid rgba(0,0,0,.25);flex:none}
 .crow i.none{background:repeating-linear-gradient(45deg,var(--line) 0 4px,transparent 4px 8px)}
-.crow b{flex:1}
+.crow b{flex:none;width:3em}
+.crow .cname{flex:1;min-width:0;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--card);font-size:15px}
+.crow .cpick{width:40px;height:36px;padding:0;border:1px solid var(--line);border-radius:8px;background:none;flex:none}
+.cchip small{font-size:11px;color:var(--ink2);line-height:1}
 .crow button,.cpanel .bigbtn{border:1px solid var(--line);background:var(--card);border-radius:8px;padding:6px 12px}
 .cpanel .bigbtn{width:100%;margin-top:8px;padding:11px;background:var(--carbon);color:var(--onc);border:0;font-weight:700}
 .cpanel input[type=number]{width:70px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--card);font-size:16px}
@@ -323,9 +326,9 @@ body.camOn{overflow:hidden}
     <label class="check"><input type="checkbox" id="ocrDate" checked> 自動讀取傳票上的「発送日」當出貨日</label>
     <button class="linkbtn" id="cOpen" style="margin:0 0 10px">🎨 貼紙顏色設定</button>
     <div class="cpanel" id="cPanel" hidden>
-      <div class="meta" style="margin-bottom:6px">貼紙顏色＝訂貨日的星期。先把 7 種貼紙各校正一次（用平常包貨的燈光）。</div>
+      <div class="meta" style="margin-bottom:6px">貼紙顏色＝訂貨日的星期。點色塊選顏色、寫上名稱；要用相機自動辨識的話，再按「相機校正」拿實際貼紙校正一次（會更準）。</div>
       <div id="cRows"></div>
-      <button class="bigbtn" id="cAll">從週一開始依序校正</button>
+      <button class="bigbtn" id="cAll">從週日開始依序校正</button>
       <label class="check" style="margin:12px 0 6px"><input type="checkbox" id="cAuto" checked> 掃完條碼後，自動辨識貼紙顏色</label>
       <div class="row" style="font-size:15px">出貨日 = 訂貨日 + <input type="number" id="cOff" min="0" max="30" inputmode="numeric" placeholder="—"> 天</div>
       <div class="meta">空白＝出貨日自己選</div>
@@ -418,6 +421,11 @@ body.camOn{overflow:hidden}
   <div id="shMore">
   <div class="meta" style="margin-top:6px">訂貨日（貼紙）<span class="auto" id="shAuto"></span></div>
   <div class="cchips" id="shColors"></div>
+  <div class="row" id="shOrdRow" style="gap:6px;margin:-4px 0 10px">
+    <button class="nav" id="shOrdPrev" aria-label="前一週">‹週</button>
+    <input type="date" id="shOrd" aria-label="訂貨日" style="flex:1">
+    <button class="nav" id="shOrdNext" aria-label="後一週">週›</button>
+  </div>
   <div class="meta">出貨日</div>
   <div class="row" style="margin-top:4px"><input type="date" id="shDate"></div>
   <div class="qd" id="shQuick"></div>
@@ -523,7 +531,7 @@ body.camOn{overflow:hidden}
     }, e=>{ say('雲端讀取失敗：'+(e.code||e.message)+'（請檢查資料庫規則）','warn'); mode='local'; setSync(); });
     rtdb.ref(ROOT+'/colors').on('value',s=>{
       const v=s.val(); if(v && typeof v==='object'){ let changed=false;
-        Object.keys(v).forEach(k=>{ if(!colors[k]){ colors[k]=v[k]; changed=true; } });
+        Object.keys(v).forEach(k=>{ if(v[k] && (!colors[k] || (v[k].ts||0)>(colors[k].ts||0))){ colors[k]=v[k]; changed=true; } });
         if(changed){ try{ localStorage.setItem('slipColors', JSON.stringify(colors)); }catch(_){} renderColors(); } }
     }, ()=>{});
     rtdb.ref(ROOT+'/shipOffset').on('value',s=>{ const v=s.val(); if(v!==null && v!==undefined && document.activeElement!==$('cOff')){ $('cOff').value=v; try{localStorage.setItem('slipOff',v);}catch(_){} } }, ()=>{});
@@ -891,7 +899,8 @@ body.camOn{overflow:hidden}
     const arr=[...set].sort();
     $('shQuick').innerHTML=arr.map(d=>'<button data-qd="'+d+'" aria-pressed="'+(d===pending.date)+'">'+(d===TODAY?'今天 ':'')+md(d)+'</button>').join('');
     const od = pending.order ? parse(pending.order).getDay() : -1;
-    $('shColors').innerHTML = WD_ORDER.map(w=>'<button class="cchip" data-cw="'+w+'" aria-pressed="'+(w===od)+'">'+swatch(w)+WD[w]+'</button>').join('');
+    $('shOrd').value = pending.order||'';
+    $('shColors').innerHTML = WD_ORDER.map(w=>'<button class="cchip" data-cw="'+w+'" aria-pressed="'+(w===od)+'">'+swatch(w)+WD[w]+(colors[w]&&colors[w].name?'<small>'+esc(colors[w].name)+'</small>':'')+'</button>').join('');
     $('shSizes').innerHTML=sizes.map(s=>'<button class="sz" data-shs="'+esc(s)+'" style="--c:'+sizeColor(s)+'" aria-pressed="'+(s===curSize)+'">'+esc(s)+'</button>').join('');
     const q=$('shQuick').querySelector('[aria-pressed=true]'); q&&q.scrollIntoView({inline:'center',block:'nearest'});
   }
@@ -921,7 +930,8 @@ body.camOn{overflow:hidden}
       h+='<button class="del" data-act="del" aria-label="刪除 '+esc(it.code)+'">刪除</button>'+
         '<div class="full mini">'+sizes.map(s=>'<button class="sz" data-act="size" data-s="'+esc(s)+'" style="--c:'+sizeColor(s)+'" aria-pressed="'+(s===it.size)+'">'+esc(s)+'</button>').join('')+'</div>'+
         '<div class="full note"><input data-act="note" value="'+esc(it.note||'')+'" placeholder="備註（廠商、品項…）"></div>'+
-        '<div class="full"><label class="mv">改出貨日 <input type="date" data-act="move" value="'+date+'" style="flex:none;padding:3px 6px;font-size:13px"></label></div>';
+        '<div class="full" style="display:flex;flex-wrap:wrap;gap:4px 14px"><label class="mv">改出貨日 <input type="date" data-act="move" value="'+date+'" style="flex:none;padding:3px 6px;font-size:13px"></label>'+
+        '<label class="mv">訂貨日 <input type="date" data-act="order" value="'+(it.order||'')+'" style="flex:none;padding:3px 6px;font-size:13px"></label></div>';
     }
     return h+'</li>';
   }
@@ -1029,9 +1039,7 @@ body.camOn{overflow:hidden}
       sizes=list; if(!sizes.includes(curSize)) curSize=sizes[0]; render(); persistSizes(); return;
     }
     const cw=t.closest('[data-cw]'); if(cw && pending){
-      const o=lastWeekday(+cw.dataset.cw); pending.order=o; $('shAuto').textContent='';
-      if(shipOff()!==null && pending.src!=='ocr' && pending.src!=='manual'){ pending.date=addDays(o,shipOff()); pending.src='color'; $('shDate').value=pending.date; }
-      renderSheet(); renderSum(); return;
+      setOrder(lastWeekday(+cw.dataset.cw)); return;
     }
     const od=t.closest('[data-ocrd]'); if(od && pending){ pending.date=od.dataset.ocrd; pending.src='manual'; $('shDate').value=pending.date; renderSheet(); renderSum(); return; }
     const qd=t.closest('[data-qd]'); if(qd){ pending.date=qd.dataset.qd; pending.src='manual'; $('shDate').value=pending.date; renderSheet(); renderSum(); return; }
@@ -1055,9 +1063,18 @@ body.camOn{overflow:hidden}
   });
   document.addEventListener('change',e=>{
     const d=e.target.dataset||{};
+    if(d.act==='order'){ const li=e.target.closest('.slip'); patchItem(li.dataset.date, li.dataset.id, {order:e.target.value||''}); say(e.target.value?'訂貨日改為 '+md(e.target.value):'已清除訂貨日','ok'); return; }
     if(d.act==='move'){ const li=e.target.closest('.slip'); const to=e.target.value; moveItem(li.dataset.date,li.dataset.id,to); if(to) go(to); }
   });
   document.addEventListener('focusout',e=>{ if(e.target.dataset&&e.target.dataset.act==='note') setTimeout(render,0); });
+  function setOrder(o){
+    pending.order=o; $('shAuto').textContent='';
+    if(o && shipOff()!==null && pending.src!=='ocr' && pending.src!=='manual' && pending.src!=='batch'){ pending.date=addDays(o,shipOff()); pending.src='color'; $('shDate').value=pending.date; }
+    renderSheet(); renderSum();
+  }
+  $('shOrd').onchange=e=>{ if(pending) setOrder(e.target.value||''); };
+  $('shOrdPrev').onclick=()=>{ if(pending && pending.order) setOrder(addDays(pending.order,-7)); };
+  $('shOrdNext').onclick=()=>{ if(pending && pending.order) setOrder(addDays(pending.order,7)); };
   $('shDate').onchange=e=>{ if(e.target.value){ pending.date=e.target.value; pending.src='manual'; renderSheet(); renderSum(); } };
   $('shCancel').onclick=()=>{ closeSheet(); say('已略過'); };
   document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&sheetOpen){ closeSheet(); } });
@@ -1066,16 +1083,19 @@ body.camOn{overflow:hidden}
   let scanner=null, candCode='', candAt=0, camPurpose='scan';
 
   /* ---------- sticker colour ---------- */
-  const WD_ORDER=[1,2,3,4,5,6,0];
+  const WD_ORDER=[0,1,2,3,4,5,6];   // 跟倉庫的貼紙盒一樣：日→土
   const wdName=w=>'週'+WD[w];
   let colors={}, colorStep=null, calibWd=null, cTimer=null;
   try{ colors=JSON.parse(localStorage.getItem('slipColors')||'{}'); }catch(_){ colors={}; }
+  // 預設 7 色（依倉庫的貼紙）：日白・月黃・火藍・水粉・木橘・金綠・土紫
+  const DEF_COLORS={0:['#F2EFE6','白'],1:['#F1E36B','黃'],2:['#8EC5E8','藍'],3:['#F3A9C4','粉'],4:['#F7A33B','橘'],5:['#7FB246','綠'],6:['#A99BD8','紫']};
+  Object.keys(DEF_COLORS).forEach(w=>{ if(!colors[w]){ const [h,n]=DEF_COLORS[w]; const rgb=[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)); colors[w]={rgb, lab:rgb2lab(...rgb), name:n, manual:true, ts:0}; } });
   try{ const o=localStorage.getItem('slipOff'); if(o!==null) $('cOff').value=o; const a=localStorage.getItem('slipCAuto'); if(a!==null) $('cAuto').checked=a==='1'; }catch(_){}
   const shipOff=()=>{ const v=$('cOff').value.trim(); return v===''||isNaN(+v) ? null : Math.max(0,Math.min(30,Math.round(+v))); };
   const addDays=(d,n)=>{ const x=parse(d); x.setDate(x.getDate()+n); return ymd(x); };
   const lastWeekday=w=>{ const x=new Date(); while(x.getDay()!==w) x.setDate(x.getDate()-1); return ymd(x); };
   const calibrated=()=>WD_ORDER.filter(w=>colors[w]).length;
-  const colorReady=()=>$('cAuto').checked && calibrated()>=2;
+  const colorReady=()=>$('cAuto').checked && WD_ORDER.filter(w=>colors[w]&&!colors[w].manual).length>=2;   // 只有用相機校正過的才自動辨識
   const swatch=w=>colors[w] ? '<i style="background:rgb('+colors[w].rgb.join(',')+')"></i>' : '<i class="none"></i>';
 
   function rgb2lab(r,g,b){
@@ -1118,11 +1138,11 @@ body.camOn{overflow:hidden}
       $('cSw').style.background='rgb('+sm.rgb.join(',')+')';
       const r=classify(sm.lab);
       if(r&&r.ok){
-        $('cLb').textContent=wdName(r.w)+'？';
+        $('cLb').textContent=(colors[r.w]&&colors[r.w].name?colors[r.w].name+' ':'')+wdName(r.w)+'？';
         if(r.w===colorStep.last) colorStep.n++; else { colorStep.last=r.w; colorStep.n=1; }
         if(colorStep.n>=4){
           const c=colorStep.code, o=lastWeekday(r.w); colorStep=null; endColorUI(); buzz(80);
-          camToast('🎨 '+wdName(r.w)+' 訂貨', md(o)); afterColor(c, o, true);
+          camToast('🎨 '+(colors[r.w]&&colors[r.w].name?colors[r.w].name+'＝':'')+wdName(r.w)+' 訂貨', md(o)); afterColor(c, o, true);
         }
       } else { $('cLb').textContent='認不出顏色'; colorStep.n=0; colorStep.last=-1; }
     }, 140);
@@ -1134,7 +1154,7 @@ body.camOn{overflow:hidden}
 
   /* calibration */
   function beginCalib(){
-    if(calibWd===null) calibWd=1;
+    if(calibWd===null) calibWd=0;
     setStage('calib');
     showColorUI('校正 '+wdName(calibWd), '取色'); $('cSk').textContent='下一個';
     clearInterval(cTimer);
@@ -1152,7 +1172,7 @@ body.camOn{overflow:hidden}
     for(let k=0;k<6;k++){ const sm=sample(); if(sm) acc.push(sm.rgb); await new Promise(r=>setTimeout(r,80)); }
     if(!acc.length){ camToast('取色失敗','請再試一次',true); return; }
     const rgb=[0,1,2].map(j=>Math.round(acc.reduce((a,c)=>a+c[j],0)/acc.length));
-    colors[calibWd]={rgb, lab:rgb2lab(...rgb)};
+    colors[calibWd]={rgb, lab:rgb2lab(...rgb), name:(colors[calibWd]&&colors[calibWd].name)||'', ts:Date.now()};
     saveColors(); camToast('✓ '+wdName(calibWd)+' 已記住','<span style="display:inline-block;width:22px;height:22px;border-radius:50%;vertical-align:middle;background:rgb('+rgb.join(',')+')"></span>'); buzz(60);
     nextCalib();
   };
@@ -1162,11 +1182,26 @@ body.camOn{overflow:hidden}
     renderColors();
   }
   function renderColors(){
-    $('cRows').innerHTML=WD_ORDER.map(w=>'<div class="crow">'+swatch(w)+'<b>'+wdName(w)+'</b><button data-cal="'+w+'">'+(colors[w]?'重新校正':'校正')+'</button></div>').join('');
-    $('cOpen').textContent='🎨 貼紙顏色設定（已校正 '+calibrated()+'/7）';
+    const hex=w=>colors[w]?'#'+colors[w].rgb.map(x=>x.toString(16).padStart(2,'0')).join(''):'#cccccc';
+    $('cRows').innerHTML=WD_ORDER.map(w=>'<div class="crow"><input type="color" class="cpick" data-pick="'+w+'" value="'+hex(w)+'" aria-label="'+wdName(w)+'的顏色">'+
+      '<b>'+wdName(w)+'</b><input class="cname" data-cname="'+w+'" value="'+esc((colors[w]&&colors[w].name)||'')+'" placeholder="顏色名" maxlength="4">'+
+      '<button data-cal="'+w+'">'+(colors[w]&&!colors[w].manual?'重新校正':'相機校正')+'</button></div>').join('');
+    $('cOpen').textContent='🎨 貼紙 7 色設定（已設定 '+calibrated()+'/7）';
   }
   $('cOpen').onclick=()=>{ $('cPanel').hidden=!$('cPanel').hidden; renderColors(); };
-  $('cAll').onclick=()=>{ calibAll=true; calibWd=1; startCamera('calib'); };
+  $('cAll').onclick=()=>{ calibAll=true; calibWd=0; startCamera('calib'); };
+  $('cRows').addEventListener('input',e=>{
+    const pk=e.target.dataset.pick, nm=e.target.dataset.cname;
+    if(pk!==undefined){ const h=e.target.value; const rgb=[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
+      colors[pk]=Object.assign({}, colors[pk]||{}, {rgb, lab:rgb2lab(...rgb), manual:true, ts:Date.now()}); clearTimeout(colorSaveT); colorSaveT=setTimeout(saveColorsQuiet,400); }
+    if(nm!==undefined){ colors[nm]=Object.assign({rgb:[204,204,204], lab:rgb2lab(204,204,204), manual:true}, colors[nm]||{}, {name:e.target.value.trim(), ts:Date.now()}); clearTimeout(colorSaveT); colorSaveT=setTimeout(saveColorsQuiet,600); }
+  });
+  let colorSaveT=null;
+  function saveColorsQuiet(){
+    try{ localStorage.setItem('slipColors', JSON.stringify(colors)); }catch(_){}
+    if(mode==='db' && rtdb) rtdb.ref(ROOT+'/colors').set(colors).catch(()=>{});
+    $('cOpen').textContent='🎨 貼紙 7 色設定（已設定 '+calibrated()+'/7）';
+  }
   $('cRows').onclick=e=>{ const b=e.target.closest('[data-cal]'); if(!b) return; calibAll=false; calibWd=+b.dataset.cal; startCamera('calib'); };
   try{ const v=localStorage.getItem('slipOnlyTrack'); if(v!==null) $('onlyTrack').checked=v==='1'; }catch(_){}
   $('onlyTrack').onchange=()=>{ try{ localStorage.setItem('slipOnlyTrack',$('onlyTrack').checked?'1':'0'); }catch(_){} };
