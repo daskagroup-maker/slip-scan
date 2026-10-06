@@ -614,8 +614,8 @@ body.camOn{overflow:hidden}
   <div class="meta">② 點尺寸就儲存　<span id="shLoc" class="locpill"></span></div>
   <div class="sizes" id="shSizes"></div>
   <div id="shMore">
-  <div class="meta" style="margin-top:6px">注文日（微調）</div>
-  <div class="row" id="shOrdRow" style="gap:6px;margin:4px 0 10px">
+  <div class="meta" style="margin-top:6px" hidden>注文日（微調）</div>
+  <div class="row" id="shOrdRow" hidden style="gap:6px;margin:4px 0 10px">
     <button class="nav" id="shOrdPrev" aria-label="前一週">‹週</button>
     <input type="date" id="shOrd" aria-label="訂貨日" style="flex:1">
     <button class="nav" id="shOrdNext" aria-label="後一週">週›</button>
@@ -1478,7 +1478,7 @@ body.camOn{overflow:hidden}
           const openIt = !many || L.some(x=>findHi===x.it.id);
           const bg = (w==='x'||w==='m')?'var(--line)':'rgb('+colors[w].rgb.join(',')+')';
           out+='<details class="rowdet"'+(openIt?' open':'')+'><summary class="dgrp" style="border-left:8px solid '+bg+';padding-left:8px"><b>第 '+r+' 列</b>　'+(w==='x'?'無貼紙':w==='m'?'':esc(COLNAME(w))+'色')+'　'+L.length+' / '+CAP()+' 個 <button class="donebtn" data-compact="'+esc(laneOnly(L[0].date,L[0].it.size,L[0].it.loc))+'|'+r+'" style="margin-left:6px">⟳ 重新排號</button></summary><ul class="list">'+
-            L.map(x=>'<li class="slip'+(findHi===x.it.id?' foundli':'')+'" style="--c:'+sizeColor(x.it.size)+'" data-date="'+x.date+'" data-id="'+x.it.id+'"><div><div class="code"><span class="badge" style="--c:var(--ink)">'+(x.it.idx||'?')+'</span> '+esc(fmtCode(x.it.code))+'</div><div class="meta">出貨 '+md(x.date)+(x.date===TODAY?' <b style="color:var(--stamp)">今天</b>':'')+'　<span class="badge" style="--c:'+sizeColor(x.it.size)+'">'+esc(sizeLbl(x.it.size))+'</span>'+(x.it.order?'　<i class="dot" style="background:rgb('+colors[wdOf(x.it.order)].rgb.join(',')+')"></i>'+esc(COLNAME(wdOf(x.it.order)))+'・注文 '+md(x.it.order):'　無貼紙')+'<br>第 <input type="number" min="1" data-act="row" value="'+(x.it.row||'')+'" style="width:3em;padding:2px 4px;border:1px solid var(--line);border-radius:6px;font-size:14px"> 列 第 <input type="number" min="1" data-act="idx" value="'+(x.it.idx||'')+'" style="width:3em;padding:2px 4px;border:1px solid var(--line);border-radius:6px;font-size:14px"> 個</div></div><div style="display:flex;flex-direction:column;gap:4px"><button class="donebtn" data-act="done">拿走／出貨</button><span style="display:flex;gap:4px"><button class="donebtn" data-act="up" aria-label="往前" style="flex:1">▲</button><button class="donebtn" data-act="down" aria-label="往後" style="flex:1">▼</button></span><button class="donebtn" data-act="loc" style="border-color:var(--carbon);color:var(--carbon)">移位置</button></div></li>').join('')+'</ul></details>';
+            L.map(x=>'<li class="slip'+(findHi===x.it.id?' foundli':'')+'" style="--c:'+sizeColor(x.it.size)+'" data-date="'+x.date+'" data-id="'+x.it.id+'"><div><div class="code"><span class="badge" style="--c:var(--ink)">'+(x.it.idx||'?')+'</span> '+esc(fmtCode(x.it.code))+'</div><div class="meta">出貨 '+md(x.date)+(x.date===TODAY?' <b style="color:var(--stamp)">今天</b>':'')+'　<span class="badge" style="--c:'+sizeColor(x.it.size)+'">'+esc(sizeLbl(x.it.size))+'</span>'+(x.it.order?'　<i class="dot" style="background:rgb('+colors[wdOf(x.it.order)].rgb.join(',')+')"></i>'+esc(COLNAME(wdOf(x.it.order)))+'（週'+WD[wdOf(x.it.order)]+'注文）':'　無貼紙')+'<br>第 <input type="number" min="1" data-act="row" value="'+(x.it.row||'')+'" style="width:3em;padding:2px 4px;border:1px solid var(--line);border-radius:6px;font-size:14px"> 列 第 <input type="number" min="1" data-act="idx" value="'+(x.it.idx||'')+'" style="width:3em;padding:2px 4px;border:1px solid var(--line);border-radius:6px;font-size:14px"> 個</div></div><div style="display:flex;flex-direction:column;gap:4px"><button class="donebtn" data-act="done">拿走／出貨</button><span style="display:flex;gap:4px"><button class="donebtn" data-act="up" aria-label="往前" style="flex:1">▲</button><button class="donebtn" data-act="down" aria-label="往後" style="flex:1">▼</button></span><button class="donebtn" data-act="loc" style="border-color:var(--carbon);color:var(--carbon)">移位置</button></div></li>').join('')+'</ul></details>';
         });
         $('mapCell').innerHTML=out; return;
       }
@@ -1488,7 +1488,7 @@ body.camOn{overflow:hidden}
         const L=g[d], sz={}; L.forEach(x=>{ const k=sizeLbl(x.it.size); sz[k]=(sz[k]||0)+1; });
         out+='<div class="dgrp"><b>'+md(d)+' 出貨'+(d===TODAY?' <span style="color:var(--stamp)">今天</span>':'')+'</b>　'+Object.keys(sz).map(k=>'<span class="badge" style="--c:'+sizeColor(k)+'">'+esc(k)+'</span>×'+sz[k]).join('　')+'</div><ul class="list">'+
           L.sort((a,b)=>(subOf(a.it.size)-subOf(b.it.size)) || ((a.it.row||999)-(b.it.row||999)) || ((a.it.idx||999)-(b.it.idx||999))).map(x=>'<li class="slip" style="--c:'+sizeColor(x.it.size)+'" data-date="'+x.date+'" data-id="'+x.it.id+'"><div><div class="code">'+esc(fmtCode(x.it.code))+'</div><div class="meta"><span class="badge" style="--c:'+sizeColor(x.it.size)+'">'+esc(sizeLbl(x.it.size))+'</span>　第 <input type="number" min="1" data-act="row" value="'+(x.it.row||'')+'" style="width:3em;padding:2px 4px;border:1px solid var(--line);border-radius:6px;font-size:14px"> 列 第 <input type="number" min="1" data-act="idx" value="'+(x.it.idx||'')+'" style="width:3em;padding:2px 4px;border:1px solid var(--line);border-radius:6px;font-size:14px"> 個　'+'<br><b>📍 '+esc(locText(x.date,x.it.size,x.it.loc,x.it,x.it.order))+'</b>'+
-            (x.it.order?'　<i class="dot" style="background:rgb('+colors[parse(x.it.order).getDay()].rgb.join(',')+')"></i>注文 '+md(x.it.order):'')+(x.it.note?'　'+esc(x.it.note):'')+'</div></div><div style="display:flex;flex-direction:column;gap:4px"><button class="donebtn" data-act="done">已出貨</button><button class="donebtn" data-act="loc" style="border-color:var(--carbon);color:var(--carbon)">移位置</button></div></li>').join('')+'</ul>';
+            (x.it.order?'　<i class="dot" style="background:rgb('+colors[parse(x.it.order).getDay()].rgb.join(',')+')"></i>'+esc(COLNAME(wdOf(x.it.order)))+'（週'+WD[wdOf(x.it.order)]+'注文）':'')+(x.it.note?'　'+esc(x.it.note):'')+'</div></div><div style="display:flex;flex-direction:column;gap:4px"><button class="donebtn" data-act="done">已出貨</button><button class="donebtn" data-act="loc" style="border-color:var(--carbon);color:var(--carbon)">移位置</button></div></li>').join('')+'</ul>';
       });
       $('mapCell').innerHTML=out;
     } else $('mapCell').innerHTML=noneTxt+'<p class="meta">點格子或小格，看裡面有哪幾張。紅框＝有今天出貨。</p>';
@@ -1538,7 +1538,7 @@ body.camOn{overflow:hidden}
     const loc = '　📍'+esc(locText(date,it.size,it.loc,it,it.order));
     const others=(dupIdx[it.code]||[]).filter(d=>d!==date);
     let h='<li class="slip'+(it.done?' done':'')+(it.id===freshId?' flash':'')+'" style="--c:'+c+'" data-date="'+date+'" data-id="'+it.id+'">'+
-      '<div><div class="code">'+esc(fmtCode(it.code))+'</div><div class="meta">'+(search?md(date)+'　':'')+'<span class="badge" style="--c:'+c+'">'+esc(sizeLbl(it.size))+'</span>'+(it.order?'　訂 '+md(it.order):'')+loc+'　'+esc(it.t||'')+(it.done?'　<b style="color:var(--ok)">✓已出貨</b> <button class="linkbtn" data-act="undone" style="font-size:12px">復原</button>':'')+(others.length?'<br><b style="color:var(--stamp)">⚠ 重複：也在 '+others.map(md).join('、')+'</b>':'')+'</div></div>';
+      '<div><div class="code">'+esc(fmtCode(it.code))+'</div><div class="meta">'+(search?md(date)+'　':'')+'<span class="badge" style="--c:'+c+'">'+esc(sizeLbl(it.size))+'</span>'+(it.order?'　'+esc(COLNAME(wdOf(it.order)))+'（週'+WD[wdOf(it.order)]+'注文）':'')+loc+'　'+esc(it.t||'')+(it.done?'　<b style="color:var(--ok)">✓已出貨</b> <button class="linkbtn" data-act="undone" style="font-size:12px">復原</button>':'')+(others.length?'<br><b style="color:var(--stamp)">⚠ 重複：也在 '+others.map(md).join('、')+'</b>':'')+'</div></div>';
     if(search){
       h+='<button class="jump" data-act="jump">看當天</button>'+(it.note?'<div class="full meta">'+esc(it.note)+'</div>':'');
     } else {
@@ -1546,7 +1546,7 @@ body.camOn{overflow:hidden}
         '<div class="full mini">'+sizes.map(s=>'<button class="sz" data-act="size" data-s="'+esc(s)+'" style="--c:'+sizeColor(s)+'" aria-pressed="'+(s===it.size)+'">'+esc(s)+'</button>').join('')+'</div>'+
         '<div class="full note"><input data-act="note" value="'+esc(it.note||'')+'" placeholder="備註（廠商、品項…）"></div>'+
         '<div class="full" style="display:flex;flex-wrap:wrap;gap:4px 14px"><label class="mv">改出貨日 <input type="date" data-act="move" value="'+date+'" style="flex:none;padding:3px 6px;font-size:13px"></label>'+
-        '<button class="mv" data-act="loc">📍 移位置</button><label class="mv">訂貨日 <input type="date" data-act="order" value="'+(it.order||'')+'" style="flex:none;padding:3px 6px;font-size:13px"></label></div>';
+        '<button class="mv" data-act="loc">📍 移位置</button><label class="mv">貼紙 <select data-act="ocol" style="padding:3px 6px;font-size:13px"><option value="">不選</option>'+WD_ORDER.map(w=>'<option value="'+w+'"'+(it.order&&wdOf(it.order)===w?' selected':'')+'>'+esc(COLNAME(w))+'（週'+WD[w]+'）</option>').join('')+'</select></label></div>';
     }
     return h+'</li>';
   }
@@ -1611,7 +1611,7 @@ body.camOn{overflow:hidden}
         if(gone(d,it)){ old++; return; } n++;
         const dot = it.order ? '<i class="dot" style="background:rgb('+colors[parse(it.order).getDay()].rgb.join(',')+')"></i>' : '';
         h+='<div class="findcard"><div class="fl" style="'+stkStyle(it.order)+'">📍 '+esc(locText(d,it.size,it.loc,it,it.order))+'</div>'+
-           '<div class="fr"><b>'+esc(fmtCode(it.code))+'</b><span>出貨 '+md(d)+(it.order?'　'+dot+'注文 '+md(it.order):'')+(d===TODAY?' 今天':'')+'</span>'+(it.note?'<span>'+esc(it.note)+'</span>':'')+'</div>'+'<button class="mapgo" data-showmap="'+d+'|'+it.id+'">🗺 在地圖上看</button>'+'</div>';
+           '<div class="fr"><b>'+esc(fmtCode(it.code))+'</b><span>出貨 '+md(d)+(it.order?'　'+dot+esc(COLNAME(wdOf(it.order)))+'（週'+WD[wdOf(it.order)]+'注文）':'')+(d===TODAY?' 今天':'')+'</span>'+(it.note?'<span>'+esc(it.note)+'</span>':'')+'</div>'+'<button class="mapgo" data-showmap="'+d+'|'+it.id+'">🗺 在地圖上看</button>'+'</div>';
       });
     });
     if(old) h+='<p class="meta">另有 '+old+' 筆已出貨／出貨日已過，不顯示。</p>';
@@ -1691,6 +1691,9 @@ body.camOn{overflow:hidden}
   document.addEventListener('change',e=>{
     const d=e.target.dataset||{};
     if(d.act==='row'||d.act==='idx'){ const li=e.target.closest('.slip'); const v=Math.max(1,parseInt(e.target.value)||1); patchItem(li.dataset.date, li.dataset.id, {[d.act]:v}); say((d.act==='row'?'改為第 '+v+' 列':'改為第 '+v+' 個'),'ok'); return; }
+    if(d.act==='ocol'){ const li=e.target.closest('.slip'), v=e.target.value; let o='';
+      if(v!==''){ const x=parse(li.dataset.date); while(x.getDay()!==+v) x.setDate(x.getDate()-1); o=ymd(x); }
+      patchItem(li.dataset.date, li.dataset.id, {order:o}); say(v===''?'已清除貼紙顏色':'貼紙改為 '+COLNAME(+v),'ok'); return; }
     if(d.act==='order'){ const li=e.target.closest('.slip'); patchItem(li.dataset.date, li.dataset.id, {order:e.target.value||''}); say(e.target.value?'訂貨日改為 '+md(e.target.value):'已清除訂貨日','ok'); return; }
     if(d.act==='move'){ const li=e.target.closest('.slip'); const to=e.target.value; moveItem(li.dataset.date,li.dataset.id,to); if(to) go(to); }
   });
@@ -1770,7 +1773,7 @@ body.camOn{overflow:hidden}
         if(r.w===colorStep.last) colorStep.n++; else { colorStep.last=r.w; colorStep.n=1; }
         if(colorStep.n>=4){
           const c=colorStep.code, o=lastWeekday(r.w); colorStep=null; endColorUI(); buzz(80);
-          camToast('🎨 '+(colors[r.w]&&colors[r.w].name?colors[r.w].name+'＝':'')+wdName(r.w)+' 訂貨', md(o)); afterColor(c, o, true);
+          camToast('🎨 '+(colors[r.w]&&colors[r.w].name?colors[r.w].name+'＝':'')+wdName(r.w)+' 注文', ''); afterColor(c, o, true);
         }
       } else { $('cLb').textContent='認不出顏色'; colorStep.n=0; colorStep.last=-1; }
     }, 140);
