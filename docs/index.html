@@ -194,6 +194,42 @@ input[type=date],input[type=month]{flex:1;min-width:0;padding:8px 10px;border:1p
 .rowln.hi{outline:3px solid #ff9500;outline-offset:0;z-index:2}
 .rowln.hi::after{content:"◀";position:absolute;right:-12px;color:#ff9500;font-size:12px}
 .slip.foundli{outline:4px solid #ffd60a;outline-offset:-1px;background:#fffbe6}
+.slot2{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;min-height:118px;padding:16px 6px 8px;border:2px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);font-variant-numeric:tabular-nums}
+.slot2.empty{background:var(--paper);opacity:.7}
+.slot2 .sn{position:absolute;left:6px;top:3px;font-size:12px;color:var(--ink2);font-weight:700}
+.slot2 .tbadge{position:absolute;right:4px;top:3px;font-size:10px;font-weight:900;color:#fff;background:var(--stamp);border-radius:6px;padding:0 4px}
+.slot2 .sd{display:flex;flex-direction:column;align-items:center;font-size:13px;line-height:1.25;color:var(--ink2)}
+.slot2 .sd span.on{color:var(--ink);font-weight:900}
+.slot2 .sd b{color:var(--carbon)}
+.slot2 .sc{font-size:24px;font-weight:900;line-height:1.1}
+.slot2 .sc small{font-size:12px;font-weight:700}
+.cbarS{display:flex;width:100%;height:8px;border-radius:4px;overflow:hidden;border:1px solid rgba(0,0,0,.15)}
+.cbarS i{display:block;height:100%}
+.slot2 .szs{display:flex;flex-wrap:wrap;gap:2px;justify-content:center}
+.slot2 .szs i{font-style:normal;font-size:10px;font-weight:900;color:#fff;border-radius:4px;padding:0 4px}
+.slot2.today{border-color:var(--stamp);box-shadow:inset 0 0 0 2px var(--stamp)}
+.slot2.sel{outline:3px solid var(--ink);outline-offset:2px}
+.slot2.found{border-color:#ffb300!important;box-shadow:0 0 0 4px #ffd60a;animation:fpulse 1s ease-in-out 3}
+.inhead{font-size:17px;margin:12px 0 4px}
+.inlegend{font-size:12px;color:var(--ink2);margin-bottom:6px}
+.lg2{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin:0 3px 0 8px;border:1px solid var(--line)}
+.lg2.t{box-shadow:inset 0 0 0 2px var(--stamp)} .lg2.f{background:#ffd60a}
+.inblk{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px;margin:8px 0}
+.inblk.insel{border:2px solid var(--ink)}
+.inbh{display:flex;align-items:center;gap:6px;font-size:16px;margin-bottom:6px}
+.locmini{display:inline-flex;gap:2px}
+.locmini i{display:block;width:10px;height:14px;border:1.5px solid var(--ink2);border-radius:2px}
+.locmini i.on{background:var(--ink);border-color:var(--ink)}
+.ingrid{display:flex;flex-direction:column;gap:3px}
+.inrow{display:grid;grid-template-columns:38px repeat(var(--cap),1fr);gap:2px;align-items:center}
+.inrow.hi{outline:2px solid #ff9500;outline-offset:1px;border-radius:4px}
+.inlab{height:22px;border-radius:4px;font-size:12px;font-weight:900;color:#222;display:flex;align-items:center;justify-content:center;gap:2px;line-height:1}
+.inlab small{font-size:9px;font-weight:700}
+.ic{height:22px;border:1px dashed var(--line);border-radius:3px;min-width:0;padding:0;font-size:9px;font-weight:700;color:rgba(0,0,0,.55);background:transparent}
+.ic.full{border:1px solid rgba(0,0,0,.25)}
+.ic.t{box-shadow:inset 0 0 0 2px var(--stamp)}
+.ic.f{outline:3px solid #ff9500;outline-offset:0;z-index:1;animation:fpulse 1s ease-in-out 4}
+.ic.sel{outline:3px solid var(--ink);outline-offset:0;z-index:1}
 .maplegend{align-items:center;display:flex;gap:14px;font-size:13px;color:var(--ink2);margin:8px 2px}
 .maplegend .lg{display:inline-block;width:14px;height:14px;border-radius:4px;vertical-align:-2px;margin-right:4px}
 .maplegend .lg.today{border:2px solid var(--stamp)}
@@ -1300,7 +1336,11 @@ body.camOn{overflow:hidden}
       const rows=laneRows(lane,exceptId);
       const mine=Object.keys(rows).map(Number).filter(r=>(!byColor() || rows[r].w===w) && (!limit || r<=limit)).sort((a,b)=>a-b);
       for(const r of mine){ for(let i=1;i<=cap;i++) if(!rows[r].idx.has(i)) return {row:r, idx:i}; }
-      let r=1; while(rows[r]) r++;
+      let r=1;
+      if(byColor()){   // 分顏色：每個顏色先用自己固定的列（日＝第1列、月＝第2列…土＝第7列），滿了再往第8列之後開
+        const pref = w==='x' ? 8 : WD_ORDER.indexOf(w)+1;
+        if(!rows[pref]) r=pref; else { r=8; while(rows[r]) r++; }
+      } else { while(rows[r]) r++; }
       return (limit && r>limit) ? null : {row:r, idx:1};
     };
     const auto = !loc || loc.startsWith('o:');
@@ -1353,7 +1393,7 @@ body.camOn{overflow:hidden}
     const out=[]; for(const d in days) for(const it of days[d].items) if(!gone(d,it)) out.push({date:d,it});
     return out;
   }
-  let mapEdit=false, findHi=null;
+  let mapEdit=false, findHi=null, cellHi=null;
   // 那一列的 15 格，找到的那一格標出來
   function rowStrip(date,it){
     if(!it.row) return '';
@@ -1366,7 +1406,7 @@ body.camOn{overflow:hidden}
   function showOnMap(date,id){
     const it=days[date]&&days[date].items.find(i=>i.id===id); if(!it) return;
     const P=placeOf(date,it.size,it.loc);
-    findHi=id; mapFilter='all'; mapEdit=false;
+    findHi=id; cellHi=id; mapFilter='all'; mapEdit=false;
     ['mfAll','mfToday','mfTmr'].forEach(x=>$(x).setAttribute('aria-pressed', x==='mfAll'));
     mapSel = !P ? 'none' : P.free!=null ? 'x:'+P.free : P.r+'-'+P.c+'-'+P.i;
     if(camOn()) stopScan();
@@ -1395,34 +1435,20 @@ body.camOn{overflow:hidden}
     const S=layout.subs||[];
     let h='<div class="wh">';
     layout.rows.forEach((row,r)=>{
-      h+='<div class="whlbl">'+esc((layout.names&&layout.names[r])||('第'+(r+1)+'排'))+(mapEdit?'':'　<span style="opacity:.8">● 每條＝一列，數字＝列號・個數（第 1 列在'+(layout.posFrom==='aisle'?'最下面':'最上面')+'）</span>')+'</div><div class="'+(mapEdit?'whedit':'whrow')+'" style="grid-template-columns:repeat('+row.length+',minmax('+(layout.subDir==='h'?96:Math.max(96,(layout.subs||[]).length*44))+'px,1fr))">';
+      h+='<div class="whlbl">'+esc((layout.names&&layout.names[r])||('第'+(r+1)+'排'))+(mapEdit?'':'　<span style="opacity:.8">點格子看裡面怎麼擺</span>')+'</div><div class="'+(mapEdit?'whedit':'whrow')+'" style="grid-template-columns:repeat('+row.length+',minmax(112px,1fr))">';
       row.forEach((keys,c)=>{
         const id=r+'-'+c, L=cell[id]||[];
         if(mapEdit){ h+='<label class="ledit"><span>'+esc((layout.names&&layout.names[r])||'')+' '+(c+1)+' 號</span><input data-lay="'+id+'" value="'+keys.map(mdk).join(', ')+'" placeholder="例：1/27, 2/13" inputmode="text"></label>'; return; }
         const dl=keys.map(k=>{ const n=L.filter(x=>x.date.slice(5)===k).length; return '<span class="'+(n?'on':'')+'">'+mdk(k)+(n?' <b>'+n+'</b>':'')+'</span>'; }).join('');
-        h+='<div class="slot'+(L.length?'':' empty')+(L.some(x=>x.date===TODAY)?' today':'')+(mapSel===id?' sel':'')+((findHi&&L.some(x=>x.it.id===findHi))||(focus&&L.length)?' found':'')+'" '+((findHi&&L.some(x=>x.it.id===findHi))||(focus&&L.length)?'data-found="1"':'')+'><button class="sh" data-slot="'+id+'"><span class="sn">'+(c+1)+'</span><span class="sd">'+dl+'</span><span class="sc">'+(L.length?L.length+' 箱':'空')+'</span></button>';
-        h+='<div class="subs'+(layout.subDir==='h'?' h':'')+'" style="--n:'+Math.max(1,S.length)+'">';
-        S.forEach((sub,i)=>{
-          const k=id+'-'+i, M=cell[k]||[];
-          const byR={}; M.forEach(x=>{ (byR[x.it.row||0]=byR[x.it.row||0]||[]).push(x); });
-          const cap=CAP();
-          const allR=Object.keys(byR).map(Number).sort((a,b)=>a-b);
-          // 列數多時（大量出貨日）：只畫 5 條（找到的、今天的優先，其餘取最後幾列），其他用摘要
-          let showR=allR;
-          if(allR.length>5){
-            const pri=allR.filter(r=>byR[r].some(x=>(findHi&&x.it.id===findHi)||x.date===TODAY));
-            showR=[...new Set([...pri, ...allR.slice(-5)])].slice(0,5).sort((a,b)=>a-b);
-          }
-          const sumTxt = allR.length>5 ? '<span class="subsum">'+allR.length+' 列・'+M.length+' 箱<br>（只顯示 '+showR.length+' 列）</span>' : '';
-          const lines=sumTxt+showR.map(r=>{
-            const R=byR[r], ws=[...new Set(R.map(x=>wdOf(x.it.order)))], w=ws.length===1?ws[0]:'m', bg = (w==='x'||w==='m') ? 'var(--line)' : 'rgb('+colors[w].rgb.join(',')+')';
-            const t=R.some(x=>x.date===TODAY);
-            return '<span class="rowln'+(t?' t':'')+(findHi&&R.some(x=>x.it.id===findHi)?' hi':'')+'" style="--cb:'+bg+'"><b>'+(r||'?')+'</b><i style="width:'+Math.min(100,R.length/cap*100)+'%"></i><u>'+(w==='x'?'無':w==='m'?'':esc(COLNAME(w)))+'</u><em>'+R.length+'</em></span>';
-          }).join('');
-          h+='<button class="sub'+(M.length?'':' none')+(M.some(x=>x.date===TODAY)?' today':'')+(mapSel===k?' sel':'')+'" data-slot="'+k+'"><span class="subn">'+esc(sub.n)+'<small>'+esc((sub.s||[]).length>2?sub.s[0]+'〜':(sub.s||[]).join('/'))+'</small></span>'+
-            (M.length?lines:'<span class="subd">—</span>')+'</button>';
-        });
-        h+='</div></div>';
+        const isFound=(findHi&&L.some(x=>x.it.id===findHi))||(focus&&L.length);
+        // 顏色組成條
+        const cw={}; L.forEach(x=>{ const w=wdOf(x.it.order); cw[w]=(cw[w]||0)+1; });
+        const bar=L.length?'<span class="cbarS">'+[...WD_ORDER,'x'].filter(w=>cw[w]).map(w=>'<i style="flex:'+cw[w]+';background:'+(w==='x'?'var(--line)':'rgb('+colors[w].rgb.join(',')+')')+'"></i>').join('')+'</span>':'';
+        const sz={}; L.forEach(x=>{ const k=sizeLbl(x.it.size); sz[k]=(sz[k]||0)+1; });
+        const szs=Object.keys(sz).map(k=>'<i style="background:'+sizeColor(k)+'">'+esc(k)+' '+sz[k]+'</i>').join('');
+        const nt=L.filter(x=>x.date===TODAY).length;
+        h+='<button class="slot2'+(L.length?'':' empty')+(nt?' today':'')+(mapSel&&mapSel.split('-').slice(0,2).join('-')===id&&!mapSel.startsWith('x:')?' sel':'')+(isFound?' found':'')+'" '+(isFound?'data-found="1" ':'')+'data-slot="'+id+'">'+
+          '<span class="sn">'+(c+1)+'</span>'+(nt?'<span class="tbadge">今天 '+nt+'</span>':'')+'<span class="sd">'+dl+'</span><span class="sc">'+(L.length?L.length+'<small> 箱</small>':'空')+'</span>'+bar+'<span class="szs">'+szs+'</span></button>';
       });
       h+='</div>'; if(r<layout.rows.length-1 && !mapEdit) h+='<div class="aisle">通道</div>';
     });
@@ -1466,6 +1492,49 @@ body.camOn{overflow:hidden}
     else if(mapSel && cell[mapSel]){ const p=mapSel.split('-').map(Number); list=cell[mapSel]; title=slotName({r:p[0],c:p[1]})+(p.length>2?'・'+subName(p[2]):''); }
     const freeTxt = Object.keys(free).map(k=>'<button class="donebtn" data-slot="x:'+esc(k)+'" style="margin:6px 6px 0 0">📍 '+esc(k)+' '+free[k].length+' 箱</button>').join('');
     const noneTxt = freeTxt + (none.length ? '<button class="donebtn" data-slot="none" style="margin:6px 0;border-color:var(--stamp);color:var(--stamp)">⚠ 未分配位置 '+none.length+' 箱（出貨日不在配置裡）</button>' : '');
+    // ===== 格子內部圖：照現場的樣子畫出 左/中/右 × 第幾列 × 第幾個 =====
+    const slotSel = mapSel && !mapSel.startsWith('x:') && mapSel!=='none' ? mapSel.split('-').map(Number) : null;
+    if(slotSel && !mapEdit){
+      const [rr,cc,si]=slotSel, sid=rr+'-'+cc, keys=layout.rows[rr]&&layout.rows[rr][cc]||[], L=cell[sid]||[];
+      let out=noneTxt+'<div class="inhead"><b>📍 '+esc(slotName({r:rr,c:cc}))+'</b>　'+keys.map(mdk).join('・')+'　共 '+L.length+' 箱</div><button class="donebtn" data-slot="'+sid+'" style="margin:2px 0 6px">✕ 關閉，回到全部</button>';
+      out+='<div class="inlegend">每一格＝一箱，顏色＝貼紙顏色　<i class="lg2 t"></i>今天出貨　<i class="lg2 f"></i>正在找的</div>';
+      const cap=CAP(), up=layout.posFrom!=='aisle';
+      (S.length?S:[{n:'',s:[]}]).forEach((sub,i)=>{
+        const M=cell[sid+'-'+(S.length?i:-1)]||[];
+        const byR={}; M.forEach(x=>{ (byR[x.it.row||0]=byR[x.it.row||0]||{})[x.it.idx||0]=x; });
+        let rowsN=Object.keys(byR).map(Number).filter(Boolean);
+        let maxR=rowsN.length?Math.max(...rowsN):0;
+        if(byColor()) maxR=Math.max(maxR,7); else maxR=Math.max(maxR+ (M.length?0:1), 1);
+        const loc=S.map((x,j)=>'<i class="'+(j===i?'on':'')+'"></i>').join('');
+        out+='<div class="inblk'+(si===i?' insel':'')+'" '+(si===i?'id="inSel"':'')+'><div class="inbh"><span class="locmini">'+loc+'</span><b>'+esc(sub.n||'')+'</b>　'+esc((sub.s||[]).length>2?sub.s[0]+'〜':(sub.s||[]).join('・'))+'<span class="meta" style="margin-left:auto">'+M.length+' 箱</span></div>';
+        const order=[]; for(let r=1;r<=Math.min(maxR,80);r++) order.push(r); if(!up) order.reverse();
+        out+='<div class="ingrid" style="--cap:'+cap+'">';
+        order.forEach(r=>{
+          const R=byR[r]||{}, items=Object.values(R);
+          const fixedW = byColor() && r<=7 ? WD_ORDER[r-1] : null;
+          const ws=[...new Set(items.map(x=>wdOf(x.it.order)))], w = fixedW!=null?fixedW : (ws.length===1?ws[0]:null);
+          const lab = w==null ? '' : (w==='x'?'無':esc(COLNAME(w)));
+          const lbg = w==null||w==='x' ? 'var(--line)' : 'rgb('+colors[w].rgb.join(',')+')';
+          out+='<div class="inrow'+(items.some(x=>x.it.id===findHi)?' hi':'')+'"><span class="inlab" style="background:'+lbg+'">'+r+'<small>'+lab+'</small></span>';
+          const n=Math.max(cap, ...Object.keys(R).map(Number));
+          for(let k=1;k<=n;k++){
+            const x=R[k];
+            if(!x){ out+='<span class="ic"></span>'; continue; }
+            const xw=wdOf(x.it.order), bg= xw==='x'?'#cfd5dd':'rgb('+colors[xw].rgb.join(',')+')';
+            out+='<button class="ic full'+(x.date===TODAY?' t':'')+(x.it.id===findHi?' f':'')+(x.it.id===cellHi?' sel':'')+'" style="background:'+bg+'" data-cell="'+x.date+'|'+x.it.id+'" aria-label="第'+r+'列第'+k+'個 '+esc(fmtCode(x.it.code))+'">'+k+'</button>';
+          }
+          out+='</div>';
+        });
+        out+='</div></div>';
+      });
+      // 點到的那一箱
+      if(cellHi){ let hit=null; L.forEach(x=>{ if(x.it.id===cellHi) hit=x; });
+        if(hit){ const x=hit; out+='<ul class="list" id="cellCard"><li class="slip foundli" style="--c:'+sizeColor(x.it.size)+'" data-date="'+x.date+'" data-id="'+x.it.id+'"><div><div class="code">'+esc(fmtCode(x.it.code))+'</div><div class="meta"><b>📍 '+esc(locText(x.date,x.it.size,x.it.loc,x.it,x.it.order))+'</b><br>出貨 '+md(x.date)+(x.date===TODAY?' <b style="color:var(--stamp)">今天</b>':'')+(x.it.note?'　'+esc(x.it.note):'')+'</div></div><div style="display:flex;flex-direction:column;gap:4px"><button class="donebtn" data-act="done">拿走／出貨</button><span style="display:flex;gap:4px"><button class="donebtn" data-act="up" aria-label="往前" style="flex:1">▲</button><button class="donebtn" data-act="down" aria-label="往後" style="flex:1">▼</button></span><button class="donebtn" data-act="loc" style="border-color:var(--carbon);color:var(--carbon)">移位置</button></div></li></ul>'; } }
+      else out+='<p class="meta">點任何一格，看是哪一張傳票。</p>';
+      $('mapCell').innerHTML=out;
+      if(si>=0 && $('inSel')) setTimeout(()=>$('inSel').scrollIntoView({block:'nearest',behavior:'smooth'}),60);
+      return;
+    }
     if(list){
       const isSub = mapSel && mapSel.split('-').length===3 && !mapSel.startsWith('x:');
       if(isSub){   // 小格：依「列」分組，由上往下
@@ -1510,7 +1579,7 @@ body.camOn{overflow:hidden}
   $('autoExp').onchange=()=>{ try{ localStorage.setItem('slipAutoExp',$('autoExp').checked?'1':'0'); }catch(_){} render(); };
   $('mfDate').onchange=e=>{ mapFilter=e.target.value?'d:'+e.target.value:'all'; mapSel=null; setTimeout(()=>{ const f=document.querySelector('[data-found]'); if(f) f.scrollIntoView({block:'nearest',inline:'center',behavior:'smooth'}); else if(!$('mapWarn').hidden) $('mapWarn').scrollIntoView({block:'nearest'}); },60); ['mfAll','mfToday','mfTmr'].forEach(x=>$(x).setAttribute('aria-pressed', x==='mfAll'&&!e.target.value)); renderMap(); };
   ['mfAll','mfToday','mfTmr'].forEach((id,i)=>{ $(id).onclick=()=>{ mapFilter=['all','today','tmr'][i]; mapSel=null; ['mfAll','mfToday','mfTmr'].forEach(x=>$(x).setAttribute('aria-pressed', x===id)); renderMap(); }; });
-  const pickSlot=e=>{ const b=e.target.closest('[data-slot]'); if(!b||mapEdit) return false; mapSel = mapSel===b.dataset.slot ? null : b.dataset.slot; renderMap(); if(mapSel) $('mapCell').scrollIntoView({block:'nearest',behavior:'smooth'}); return true; };
+  const pickSlot=e=>{ const b=e.target.closest('[data-slot]'); if(!b||mapEdit) return false; cellHi=null; mapSel = mapSel===b.dataset.slot ? null : b.dataset.slot; renderMap(); if(mapSel) $('mapCell').scrollIntoView({block:'nearest',behavior:'smooth'}); return true; };
   $('map').onclick=pickSlot;
   $('mapWarn').addEventListener('click',e=>{
     const a=e.target.closest('[data-assign]');
@@ -1523,6 +1592,7 @@ body.camOn{overflow:hidden}
       }); return; }
     if(pickSlot(e)) return;
   });
+  $('mapCell').addEventListener('click',e=>{ const c=e.target.closest('[data-cell]'); if(!c) return; e.stopImmediatePropagation(); const i=c.dataset.cell.indexOf('|'); cellHi=c.dataset.cell.slice(i+1); renderMap(); setTimeout(()=>{ const k=$('cellCard'); if(k) k.scrollIntoView({block:'nearest',behavior:'smooth'}); },50); }, true);
   $('mapCell').onclick=e=>{
     const cp=e.target.closest('[data-compact]'); if(cp){ const i=cp.dataset.compact.lastIndexOf('|'); const n=compactRow({lane:cp.dataset.compact.slice(0,i), row:+cp.dataset.compact.slice(i+1)}, true); render(); say(n?'已重新排號':'順序已經是連續的','ok'); return; }
     if(pickSlot(e)) return;
