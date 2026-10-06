@@ -142,6 +142,10 @@ input[type=date],input[type=month]{flex:1;min-width:0;padding:8px 10px;border:1p
 .slot .subn small{font-weight:400;color:var(--ink2);margin-left:3px;font-size:10px}
 .slot .subd{font-size:12px;font-variant-numeric:tabular-nums}
 .dgrp{margin:12px 0 6px;font-size:15px}
+.rowdet>summary{cursor:pointer;list-style:none}
+.rowdet>summary::before{content:'▶ ';font-size:12px}
+.rowdet[open]>summary::before{content:'▼ '}
+.subsum{font-size:10px;color:var(--ink2);line-height:1.2;margin-top:2px;text-align:center}
 .slot .subs{display:grid;grid-template-columns:repeat(var(--n),1fr);border-top:1px solid var(--line);flex:1}
 .slot .subs .sub{border-top:0;border-left:1px solid var(--line);align-items:center;text-align:center;padding:4px 2px;min-height:90px;justify-content:flex-start}
 .slot .subs .sub:first-child{border-left:0}
@@ -654,21 +658,27 @@ body.camOn{overflow:hidden}
   let Q=[]; try{ Q=JSON.parse(localStorage.getItem('slipQ')||'[]'); }catch(_){ Q=[]; }
   const saveQ=()=>{ try{ localStorage.setItem('slipQ', JSON.stringify(Q)); }catch(_){} };
   let cloudCfg=false, flushing=false;
+  // 大量寫入時（例如一次補 2000 筆位置）先累積，最後一次存檔、一次上傳
+  let bulk=0;
+  function withBulk(fn){ bulk++; try{ return fn(); } finally { bulk--; if(!bulk){ saveLocal(); if(cloudCfg){ saveQ(); setSync(); flush(); } } } }
   function dbOp(path,val){
-    saveLocal();
+    if(!bulk) saveLocal();
     if(!cloudCfg) return;
-    Q.push({p:path, v:val==null?null:val}); saveQ(); setSync(); flush();
+    Q.push({p:path, v:val==null?null:val});
+    if(!bulk){ saveQ(); setSync(); flush(); }
   }
   async function flush(){
     if(mode!=='db' || !rtdb || flushing) return; flushing=true;
     while(Q.length){
-      const op=Q[0];
-      try{ await rtdb.ref(ROOT+'/'+op.p).set(op.v); Q.shift(); saveQ(); }
+      const n=Math.min(Q.length, 300), upd={};
+      for(let k=0;k<n;k++) upd[Q[k].p]=Q[k].v;            // 一次最多 300 筆一起送（同一筆以最後為準）
+      try{ await rtdb.ref(ROOT).update(upd); Q.splice(0,n); saveQ(); }
       catch(e){ say('儲存失敗：'+(e.code||e.message)+'（請檢查資料庫規則）','warn'); break; }
       setSync();
     }
     flushing=false; setSync();
   }
+
   const putItem=(date,it)=>dbOp(itemPath(date,it.id), cleanOne(it));
   const delItem=(date,id)=>dbOp(itemPath(date,id), null);
   function applyQ(next){
@@ -708,7 +718,7 @@ body.camOn{overflow:hidden}
       if(first){
         first=false;
         const toPush=localDays.filter(d=>!next[d] && !Q.some(op=>op.p.startsWith('days/'+d+'/')));
-        if(toPush.length){ toPush.forEach(d=>(days[d]?days[d].items:[]).forEach(i=>putItem(d,i))); say('已把本機的 '+toPush.length+' 天資料上傳雲端','ok'); }
+        if(toPush.length){ withBulk(()=>toPush.forEach(d=>(days[d]?days[d].items:[]).forEach(i=>putItem(d,i)))); say('已把本機的 '+toPush.length+' 天資料上傳雲端','ok'); }
       }
       days=applyQ(next); saveLocal(); if(assignMissingPos()) saveLocal(); render();
     }, e=>{ say('雲端讀取失敗：'+(e.code||e.message)+'（請檢查資料庫規則）','warn'); mode='local'; setSync(); });
@@ -1224,10 +1234,13 @@ body.camOn{overflow:hidden}
   ], names:['上排','下排'], subs:[{n:'左',s:['60']},{n:'中',s:['80']},{n:'右',s:['100','120','140','白盒']}]};
   let layout=DEF_LAYOUT; try{ const v=JSON.parse(localStorage.getItem('slipLayout')||'null'); if(v&&v.rows) layout=v; }catch(_){}
   if(!layout.subs) layout.subs=DEF_LAYOUT.subs;
+  let slotCache=new Map(), slotLayout=null;
   function slotOf(date){
-    const k=date.slice(5);
-    for(let r=0;r<layout.rows.length;r++) for(let c=0;c<layout.rows[r].length;c++) if((layout.rows[r][c]||[]).includes(k)) return {r,c,id:r+'-'+c};
-    return null;
+    if(slotLayout!==layout){ slotCache.clear(); slotLayout=layout; }
+    const k=date.slice(5); if(slotCache.has(k)) return slotCache.get(k);
+    let res=null;
+    for(let r=0;r<layout.rows.length && !res;r++) for(let c=0;c<layout.rows[r].length;c++) if((layout.rows[r][c]||[]).includes(k)){ res={r,c,id:r+'-'+c}; break; }
+    slotCache.set(k,res); return res;
   }
   const slotName=s=>(layout.names&&layout.names[s.r]||('第'+(s.r+1)+'排'))+' '+(s.c+1)+' 號';
   // 格子裡依尺寸分小格（沒列到的尺寸放最後一小格）
@@ -1252,13 +1265,22 @@ body.camOn{overflow:hidden}
   const laneOnly=(date,size,loc)=>{ const P=placeOf(date,size,loc); return P?P.key:'none'; };
   const byColor=()=>layout.byColor===true;   // 預設：照順序放，不依顏色分列
   const laneKey=(date,size,loc,order)=>laneOnly(date,size,loc)+'|'+(byColor()?wdOf(order):'');
+  /* 位置索引（大量件數也快）：lane → row → {w, ids:Map(id→idx)}；每次畫面更新時重建一次 */
+  let LIX=null, LPOS=null;
+  function lix(){
+    if(LIX) return LIX; LIX=new Map(); LPOS=new Map();
+    for(const d in days) for(const it of days[d].items){ if(!it.row || gone(d,it)) continue; lixAdd(laneOnly(d,it.size,it.loc), it); }
+    return LIX;
+  }
+  function lixAdd(lane,it){
+    let L=LIX.get(lane); if(!L) LIX.set(lane, L=new Map());
+    let R=L.get(it.row); if(!R) L.set(it.row, R={w:wdOf(it.order), ids:new Map()});
+    R.ids.set(it.id, it.idx); LPOS.set(it.id,[lane,it.row]);
+  }
+  function lixDel(id){ const p=LPOS&&LPOS.get(id); if(!p) return; const R=LIX.get(p[0])&&LIX.get(p[0]).get(p[1]); if(R){ R.ids.delete(id); if(!R.ids.size) LIX.get(p[0]).delete(p[1]); } LPOS.delete(id); }
   function laneRows(lane, exceptId){
-    const rows={};   // row → {w, idx:Set}
-    for(const d in days) for(const it of days[d].items){
-      if(it.id===exceptId || gone(d,it) || !it.row) continue;
-      if(laneOnly(d,it.size,it.loc)!==lane) continue;
-      const r=rows[it.row]||(rows[it.row]={w:wdOf(it.order), idx:new Set()}); r.idx.add(it.idx);
-    }
+    const rows={}, L=lix().get(lane); if(!L) return rows;
+    L.forEach((R,row)=>{ const idx=new Set(); R.ids.forEach((v,id)=>{ if(id!==exceptId) idx.add(v); }); if(idx.size) rows[row]={w:R.w, idx}; });
     return rows;
   }
   function allocSpot(date,size,loc,order,exceptId){
@@ -1273,10 +1295,11 @@ body.camOn{overflow:hidden}
   const autoCompact=()=>layout.compact!==false;
   const spotOf=(date,it)=>({lane:laneOnly(date,it.size,it.loc), row:it.row});
   function compactRow(sp, force){
+    LIX=null;
     if(!sp || !sp.row || (!force && !autoCompact())) return 0;
     const L=[]; for(const d in days) for(const it of days[d].items) if(!gone(d,it) && it.row===sp.row && laneOnly(d,it.size,it.loc)===sp.lane) L.push([d,it]);
     L.sort((a,b)=>(a[1].idx||99)-(b[1].idx||99)); let n=0;
-    L.forEach(([d,it],i)=>{ if(it.idx!==i+1){ it.idx=i+1; putItem(d,it); n++; } });
+    withBulk(()=>L.forEach(([d,it],i)=>{ if(it.idx!==i+1){ it.idx=i+1; putItem(d,it); n++; } }));
     return n;
   }
   function moveInRow(date,id,dir){
@@ -1286,17 +1309,18 @@ body.camOn{overflow:hidden}
     if(!other) return;
     other[1].idx=it.idx; it.idx+=dir; putItem(other[0],other[1]); putItem(date,it); render();
   }
-  function placeItem(date,it){ const sp=allocSpot(date,it.size,it.loc,it.order,it.id); it.row=sp.row; it.idx=sp.idx; }
+  function placeItem(date,it){ const sp=allocSpot(date,it.size,it.loc,it.order,it.id); it.row=sp.row; it.idx=sp.idx; if(LIX){ lixDel(it.id); if(!gone(date,it)) lixAdd(laneOnly(date,it.size,it.loc), it); } }
   let numbering=false;
   function assignMissingPos(){
-    if(numbering) return 0; numbering=true;
+    if(numbering) return 0; numbering=true; LIX=null;
     const miss=[]; for(const d in days) for(const it of days[d].items) if(!it.row && !gone(d,it)) miss.push([d,it]);
-    miss.sort((a,b)=>tsOf(a[1])-tsOf(b[1])).forEach(([d,it])=>{ placeItem(d,it); putItem(d,it); });
+    withBulk(()=>miss.sort((a,b)=>tsOf(a[1])-tsOf(b[1])).forEach(([d,it])=>{ placeItem(d,it); putItem(d,it); }));
     numbering=false; return miss.length;
   }
   function fixPos(date,it,oldKey){ const k=laneKey(date,it.size,it.loc,it.order); if(!it.row || k!==oldKey) placeItem(date,it); }
   const mdk=k=>{ const [m,d]=k.split('-'); return (+m)+'/'+(+d); };
   function saveLayout(){
+    slotCache.clear(); LIX=null;
     try{ localStorage.setItem('slipLayout', JSON.stringify(layout)); }catch(_){}
     if(mode==='db' && rtdb) rtdb.ref(ROOT+'/layout').set({names:layout.names||[], rows:layout.rows.map(row=>row.map(k=>(k||[]).join(',')||'-')), subs:(layout.subs||[]).map(x=>x.n+':'+(x.s||[]).join(',')), subDir:layout.subDir||'v', posFrom:layout.posFrom||'in', cap:CAP(), compact:autoCompact(), byColor:byColor()}).catch(()=>{});   // 雲端存字串，空格存 '-'
   }
@@ -1360,7 +1384,15 @@ body.camOn{overflow:hidden}
           const k=id+'-'+i, M=cell[k]||[];
           const byR={}; M.forEach(x=>{ (byR[x.it.row||0]=byR[x.it.row||0]||[]).push(x); });
           const cap=CAP();
-          const lines=Object.keys(byR).map(Number).sort((a,b)=>a-b).map(r=>{
+          const allR=Object.keys(byR).map(Number).sort((a,b)=>a-b);
+          // 列數多時（大量出貨日）：只畫 5 條（找到的、今天的優先，其餘取最後幾列），其他用摘要
+          let showR=allR;
+          if(allR.length>5){
+            const pri=allR.filter(r=>byR[r].some(x=>(findHi&&x.it.id===findHi)||x.date===TODAY));
+            showR=[...new Set([...pri, ...allR.slice(-5)])].slice(0,5).sort((a,b)=>a-b);
+          }
+          const sumTxt = allR.length>5 ? '<span class="subsum">'+allR.length+' 列・'+M.length+' 箱<br>（只顯示 '+showR.length+' 列）</span>' : '';
+          const lines=sumTxt+showR.map(r=>{
             const R=byR[r], ws=[...new Set(R.map(x=>wdOf(x.it.order)))], w=ws.length===1?ws[0]:'m', bg = (w==='x'||w==='m') ? 'var(--line)' : 'rgb('+colors[w].rgb.join(',')+')';
             const t=R.some(x=>x.date===TODAY);
             return '<span class="rowln'+(t?' t':'')+(findHi&&R.some(x=>x.it.id===findHi)?' hi':'')+'" style="--cb:'+bg+'"><b>'+(r||'?')+'</b><i style="width:'+Math.min(100,R.length/cap*100)+'%"></i><u>'+(w==='x'?'無':w==='m'?'':esc(COLNAME(w)))+'</u><em>'+R.length+'</em></span>';
@@ -1398,11 +1430,14 @@ body.camOn{overflow:hidden}
       if(isSub){   // 小格：依「列」分組，由上往下
         const R={}; list.forEach(x=>(R[x.it.row||0]=R[x.it.row||0]||[]).push(x));
         let out=noneTxt+'<div class="grp">📍 '+esc(title)+'　'+list.length+' 箱</div>';
-        Object.keys(R).map(Number).sort((a,b)=>a-b).forEach(r=>{
+        const RK=Object.keys(R).map(Number).sort((a,b)=>a-b), many=RK.length>3;
+        if(many) out+='<p class="meta">共 '+RK.length+' 列，點列標題展開。</p>';
+        RK.forEach(r=>{
           const L=R[r].sort((a,b)=>(a.it.idx||99)-(b.it.idx||99)), ws=[...new Set(L.map(x=>wdOf(x.it.order)))], w=ws.length===1?ws[0]:'m';
+          const openIt = !many || L.some(x=>findHi===x.it.id);
           const bg = (w==='x'||w==='m')?'var(--line)':'rgb('+colors[w].rgb.join(',')+')';
-          out+='<div class="dgrp" style="border-left:8px solid '+bg+';padding-left:8px"><b>第 '+r+' 列</b>　'+(w==='x'?'無貼紙':w==='m'?'':esc(COLNAME(w))+'色')+'　'+L.length+' / '+CAP()+' 個 <button class="donebtn" data-compact="'+esc(laneOnly(L[0].date,L[0].it.size,L[0].it.loc))+'|'+r+'" style="margin-left:6px">⟳ 重新排號</button></div><ul class="list">'+
-            L.map(x=>'<li class="slip'+(findHi===x.it.id?' foundli':'')+'" style="--c:'+sizeColor(x.it.size)+'" data-date="'+x.date+'" data-id="'+x.it.id+'"><div><div class="code"><span class="badge" style="--c:var(--ink)">'+(x.it.idx||'?')+'</span> '+esc(fmtCode(x.it.code))+'</div><div class="meta">出貨 '+md(x.date)+(x.date===TODAY?' <b style="color:var(--stamp)">今天</b>':'')+'　<span class="badge" style="--c:'+sizeColor(x.it.size)+'">'+esc(sizeLbl(x.it.size))+'</span>'+(x.it.order?'　<i class="dot" style="background:rgb('+colors[wdOf(x.it.order)].rgb.join(',')+')"></i>'+esc(COLNAME(wdOf(x.it.order)))+'・注文 '+md(x.it.order):'　無貼紙')+'<br>第 <input type="number" min="1" data-act="row" value="'+(x.it.row||'')+'" style="width:3em;padding:2px 4px;border:1px solid var(--line);border-radius:6px;font-size:14px"> 列 第 <input type="number" min="1" data-act="idx" value="'+(x.it.idx||'')+'" style="width:3em;padding:2px 4px;border:1px solid var(--line);border-radius:6px;font-size:14px"> 個</div></div><div style="display:flex;flex-direction:column;gap:4px"><button class="donebtn" data-act="done">拿走／出貨</button><span style="display:flex;gap:4px"><button class="donebtn" data-act="up" aria-label="往前" style="flex:1">▲</button><button class="donebtn" data-act="down" aria-label="往後" style="flex:1">▼</button></span><button class="donebtn" data-act="loc" style="border-color:var(--carbon);color:var(--carbon)">移位置</button></div></li>').join('')+'</ul>';
+          out+='<details class="rowdet"'+(openIt?' open':'')+'><summary class="dgrp" style="border-left:8px solid '+bg+';padding-left:8px"><b>第 '+r+' 列</b>　'+(w==='x'?'無貼紙':w==='m'?'':esc(COLNAME(w))+'色')+'　'+L.length+' / '+CAP()+' 個 <button class="donebtn" data-compact="'+esc(laneOnly(L[0].date,L[0].it.size,L[0].it.loc))+'|'+r+'" style="margin-left:6px">⟳ 重新排號</button></summary><ul class="list">'+
+            L.map(x=>'<li class="slip'+(findHi===x.it.id?' foundli':'')+'" style="--c:'+sizeColor(x.it.size)+'" data-date="'+x.date+'" data-id="'+x.it.id+'"><div><div class="code"><span class="badge" style="--c:var(--ink)">'+(x.it.idx||'?')+'</span> '+esc(fmtCode(x.it.code))+'</div><div class="meta">出貨 '+md(x.date)+(x.date===TODAY?' <b style="color:var(--stamp)">今天</b>':'')+'　<span class="badge" style="--c:'+sizeColor(x.it.size)+'">'+esc(sizeLbl(x.it.size))+'</span>'+(x.it.order?'　<i class="dot" style="background:rgb('+colors[wdOf(x.it.order)].rgb.join(',')+')"></i>'+esc(COLNAME(wdOf(x.it.order)))+'・注文 '+md(x.it.order):'　無貼紙')+'<br>第 <input type="number" min="1" data-act="row" value="'+(x.it.row||'')+'" style="width:3em;padding:2px 4px;border:1px solid var(--line);border-radius:6px;font-size:14px"> 列 第 <input type="number" min="1" data-act="idx" value="'+(x.it.idx||'')+'" style="width:3em;padding:2px 4px;border:1px solid var(--line);border-radius:6px;font-size:14px"> 個</div></div><div style="display:flex;flex-direction:column;gap:4px"><button class="donebtn" data-act="done">拿走／出貨</button><span style="display:flex;gap:4px"><button class="donebtn" data-act="up" aria-label="往前" style="flex:1">▲</button><button class="donebtn" data-act="down" aria-label="往後" style="flex:1">▼</button></span><button class="donebtn" data-act="loc" style="border-color:var(--carbon);color:var(--carbon)">移位置</button></div></li>').join('')+'</ul></details>';
         });
         $('mapCell').innerHTML=out; return;
       }
@@ -1441,7 +1476,7 @@ body.camOn{overflow:hidden}
     if(pickSlot(e)) return;
     const a=e.target.closest('[data-alldone]');
     if(a){ const L=[]; for(const d in days) if(d<=TODAY) for(const it of days[d].items){ const c=it.order?parse(it.order).getDay():'x'; if(!it.done && c+'|'+(it.size||'')===a.dataset.alldone) L.push([d,it]); }
-      if(!confirm(L.length+' 箱標記為已出貨？')) return; L.forEach(([d,it])=>{ it.done=true; putItem(d,it); }); render(); say(L.length+' 箱已出貨','ok'); return; }
+      if(!confirm(L.length+' 箱標記為已出貨？')) return; withBulk(()=>L.forEach(([d,it])=>{ it.done=true; putItem(d,it); })); render(); say(L.length+' 箱已出貨','ok'); return; }
   };
 
   let dupIdx={};
@@ -1464,7 +1499,10 @@ body.camOn{overflow:hidden}
     return h+'</li>';
   }
 
+  let dayLimit=100;
+  document.addEventListener('click',e=>{ if(e.target.closest('#dayMore')){ dayLimit+=100; render(); } });
   function render(){
+    LIX=null;
     buildDup();
     // stamp + date
     const dt=parse(current), s=$('stamp');
@@ -1480,10 +1518,10 @@ body.camOn{overflow:hidden}
     const items=(days[current]&&days[current].items)||[];
     const act=document.activeElement, typing=act&&act.dataset&&act.dataset.act==='note'&&$('dayList').contains(act);
     $('daySum').innerHTML = items.length ? '<span class="meta">'+md(current)+' 共 '+items.length+' 張</span>'+badgesHTML(sizeCounts(items)) : '';
-    if(!typing) $('dayList').innerHTML = items.length ? items.map(it=>slipHTML(it,current,false)).join('')
+    const LIM=dayLimit; if(!typing) $('dayList').innerHTML = items.length ? items.slice(0,LIM).map(it=>slipHTML(it,current,false)).join('')+(items.length>LIM?'<li class="empty"><button class="donebtn" id="dayMore">再顯示 100 張（共 '+items.length+' 張）</button></li>':'')
       : '<li class="empty"><b>'+md(current)+' 還沒有傳票</b>按「用相機掃描」開始登記</li>';
 
-    renderMonth(); renderFind(); renderMap(); renderPick();
+    if(!$('viewMonth').hidden) renderMonth(); if(!$('viewFind').hidden) renderFind(); if(!$('viewMap').hidden) renderMap(); renderPick();
   }
 
   function renderMonth(){
