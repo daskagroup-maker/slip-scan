@@ -1,10 +1,11 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-Hant" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>傳票掃描入庫</title>
 <meta name="theme-color" content="#2E4A8B">
+<meta name="color-scheme" content="light">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="傳票掃描">
@@ -405,6 +406,28 @@ body.camOn{overflow:hidden}
 .sheet .cancel{width:100%;margin-top:10px;padding:14px;border:1px solid var(--line);border-radius:12px;background:none;color:var(--ink2);font-size:17px}
 .foot{display:flex;justify-content:space-between;align-items:center;margin-top:20px;font-size:13px;color:var(--ink2);gap:8px}
 .foot button{border:1px solid var(--line);background:var(--card);border-radius:8px;padding:7px 12px}
+
+/* ===== 淺色相機畫面（不用黑底） ===== */
+.cam{background:var(--paper)!important}
+.camtop{background:var(--card)!important;color:var(--ink)!important;border-bottom:1px solid var(--line)}
+.camtop button{color:var(--ink)!important;border-color:var(--line)!important}
+.camtop .torch[aria-pressed=true]{background:#ffd60a!important;color:#111!important}
+.steps span{color:var(--ink2)!important}
+.steps span.on{background:var(--ink)!important;color:var(--paper)!important}
+.steps span.done{color:var(--ok)!important}
+.camtop .ttl2{color:var(--ink)}
+.campanel{background:var(--paper)!important;color:var(--ink)!important}
+.guide-in{color:var(--ink)!important;text-shadow:none!important}
+.guide-in .num{background:var(--ink)!important;color:var(--paper)!important}
+.recent li{background:var(--card)!important;border:1px solid var(--line)}
+.bdates:not(.bcol) button{border-color:var(--line)!important}
+.bdates button{color:var(--ink)!important;background:var(--card)!important}
+.bdates button[aria-pressed=true]{background:var(--ink)!important;color:var(--paper)!important;border-color:var(--ink)!important}
+.blabel{opacity:1!important;color:var(--ink2)}
+.cbar-in{background:var(--card)!important;color:var(--ink)!important;border:1px solid var(--line)}
+.cbar-in .sw{border-color:var(--line)!important}
+.cbar-in .sk{background:var(--paper)!important;color:var(--ink)!important;border:1px solid var(--line)!important}
+.sticky.on{color:#111}
 </style>
 </head>
 <body>
