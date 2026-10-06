@@ -197,6 +197,8 @@ body.batch .stamp{border-width:4px}
 .bdates{display:flex;gap:6px;overflow-x:auto;padding:2px 0 4px;zoom:var(--z)}
 .bdates button{flex:none;border:2px solid rgba(255,255,255,.25);background:transparent;color:#fff;border-radius:10px;padding:8px 12px;font-size:15px;font-variant-numeric:tabular-nums}
 .bdates button[aria-pressed=true]{background:#fff;color:#111;border-color:#fff;font-weight:900}
+.bcol button[aria-pressed=true]{background:#fff;color:#111}
+.bcol button{border-width:3px!important}
 .blabel{font-size:12px;opacity:.6;zoom:var(--z)}
 .sheet.batchmode #shMore{display:none}
 .locpill{display:inline-block;padding:1px 8px;border-radius:999px;background:var(--carbon-soft);color:var(--carbon);font-weight:700}
@@ -426,7 +428,7 @@ body.camOn{overflow:hidden}
       <button id="smEach" aria-pressed="true">逐張判斷</button>
       <button id="smBatch" aria-pressed="false">📦 批次掃描</button>
     </div>
-    <div class="bhint" id="bHint" hidden>把同一天的傳票放一疊 → 選好日期 → 連續掃。換下一疊時在相機畫面直接換日期。</div>
+    <div class="bhint" id="bHint" hidden>把同一天、同顏色的傳票放一疊 → 選好出貨日和貼紙顏色 → 連續掃。換下一疊時在相機畫面直接換。</div>
     <div class="datebar">
       <div class="stamp" id="stamp" aria-hidden="true"><span class="m"></span><span class="d"></span><span class="w"></span></div>
       <div class="datectl">
@@ -438,6 +440,10 @@ body.camOn{overflow:hidden}
         </div>
         <button class="linkbtn" id="today">回到今天</button>
       </div>
+    </div>
+    <div id="bColorMode" hidden>
+      <div class="meta">這批的貼紙顏色（注文日）</div>
+      <div class="cchips" id="bColors"></div>
     </div>
     <div id="bSizeMode" hidden>
       <div class="meta">箱子尺寸</div>
@@ -490,7 +496,7 @@ body.camOn{overflow:hidden}
       <div class="cbar" id="cBar" hidden><div class="cbar-in"><span class="sw" id="cSw"></span><span class="lb" id="cLb"></span><button class="go" id="cGo">取色</button><button class="sk" id="cSk">跳過</button></div></div>
       <div class="camlook" id="camLook"></div>
       <div class="sticky" id="stickyBar"></div>
-      <div id="bPanel" hidden><div class="blabel">這批的出貨日（點一下換）</div><div class="bdates" id="bDates"></div></div>
+      <div id="bPanel" hidden><div class="blabel">這批的出貨日（點一下換）</div><div class="bdates" id="bDates"></div><div class="blabel" style="margin-top:6px">這批的貼紙顏色（點一下換）</div><div class="bdates bcol" id="bColors2"></div></div>
       <ul class="recent" id="recent"></ul>
     </div>
   </div>
@@ -913,7 +919,7 @@ body.camOn{overflow:hidden}
   function applyMode(){
     $('smEach').setAttribute('aria-pressed', !isBatch()); $('smBatch').setAttribute('aria-pressed', isBatch());
     $('szEach').setAttribute('aria-pressed', !sizeFixed); $('szFix').setAttribute('aria-pressed', sizeFixed);
-    $('bHint').hidden=!isBatch(); $('bSizeMode').hidden=!isBatch(); $('eachOpts').hidden=isBatch();
+    $('bHint').hidden=!isBatch(); $('bSizeMode').hidden=!isBatch(); $('bColorMode').hidden=!isBatch(); $('eachOpts').hidden=isBatch();
     $('sizeBarWrap').hidden = isBatch() && !sizeFixed;
     $('sizeLbl').textContent = isBatch() ? '這批的箱子尺寸' : '預設箱子尺寸';
     $('dateLbl').textContent = isBatch() ? '這批的出貨日' : '預設出貨日';
@@ -922,7 +928,17 @@ body.camOn{overflow:hidden}
     try{ localStorage.setItem('slipMode',scanMode); localStorage.setItem('slipSizeFix',sizeFixed?'1':'0'); }catch(_){}
     renderBatchDates();
   }
+  // 批次：先選好貼紙顏色，這批掃的全部記成這個注文日（出貨日當天或之前最近的那個星期幾）
+  let batchW=''; try{ batchW=localStorage.getItem('slipBatchW')||''; }catch(_){}
+  function batchOrd(){ if(batchW==='') return ''; const w=+batchW, x=parse(current); while(x.getDay()!==w) x.setDate(x.getDate()-1); return ymd(x); }
+  function renderBatchColors(){
+    const chip=(w,big)=>'<button class="cchip" data-bw="'+w+'" aria-pressed="'+(String(w)===batchW)+'">'+(w===''?'<i class="none"></i>不選':swatch(w)+WD[w]+(colors[w]&&colors[w].name?'<small>'+esc(colors[w].name)+'</small>':''))+'</button>';
+    $('bColors').innerHTML=[...WD_ORDER,''].map(w=>chip(w)).join('');
+    if($('bColors2')) $('bColors2').innerHTML=[...WD_ORDER,''].map(w=>'<button data-bw="'+w+'" aria-pressed="'+(String(w)===batchW)+'"'+(w!==''?' style="border-color:rgb('+colors[w].rgb.join(',')+')"':'')+'>'+(w===''?'不選':esc(COLNAME(w))+WD[w])+'</button>').join('');
+  }
+  document.addEventListener('click',e=>{ const b=e.target.closest('[data-bw]'); if(!b) return; batchW=b.dataset.bw; try{ localStorage.setItem('slipBatchW',batchW); }catch(_){} renderBatchColors(); if(camOn()) setStage(stage); buzz(30); });
   function renderBatchDates(){
+    renderBatchColors();
     $('bPanel').hidden = !(isBatch() && appMode==='add' && camPurpose==='scan');
     if($('bPanel').hidden) return;
     const arr=quickDates();
@@ -950,7 +966,7 @@ body.camOn{overflow:hidden}
     $('camTtl').textContent = camPurpose==='calib'?'貼紙顏色校正':appMode==='look'?'包貨查詢':'登記傳票';
     const n = i>=0 && L.length>1 ? '<span class="num">'+(i+1)+'</span>' : '';
     let g1='', g2='';
-    if(st==='scan' && isBatch() && appMode==='add'){ g1=n+'掃 <u>'+md(current)+'</u> 的傳票'; g2 = sizeFixed ? '全部存成這天・<span class="badge" style="--c:'+sizeColor(curSize)+'">'+esc(curSize)+'</span>' : '全部存成這天，掃到後選尺寸'; }
+    if(st==='scan' && isBatch() && appMode==='add'){ g1=n+'掃 <u>'+md(current)+'</u>'+(batchW!==''?'・<span style="background:rgb('+colors[+batchW].rgb.join(',')+');color:#222;border-radius:6px;padding:0 6px">'+esc(COLNAME(+batchW))+'</span>':'')+' 的傳票'; g2 = sizeFixed ? '全部存成這天・<span class="badge" style="--c:'+sizeColor(curSize)+'">'+esc(curSize)+'</span>' : '全部存成這天，掃到後選尺寸'; }
     else if(st==='scan'){ g1=n+(appMode==='look'?'掃條碼查詢':'對準傳票條碼');
       g2 = appMode==='look' ? (pickDay?'揀 '+md(pickDay)+' 的貨：綠色要出、紅色放回':'掃傳票，顯示貨放在哪裡') : ($('onlyTrack').checked?'對準「お問合せNo」上方的條碼':'條碼放進白框，紅線會自動讀取'); }
     else if(st==='color'){ g1=n+'移到日期貼紙'; g2='讓貼紙在圓圈裡，自動判斷顏色'; }
@@ -1059,8 +1075,8 @@ body.camOn{overflow:hidden}
     lastCode=code; lastAt=now;
     if(appMode==='look'){ showLookup(code); return; }
     if(appMode==='add' && isBatch()){
-      if(sizeFixed) addItem(code, current, curSize, '', true);
-      else openSheet(code, '', false);
+      if(sizeFixed) addItem(code, current, curSize, batchOrd(), true);
+      else openSheet(code, batchOrd(), false);
       return;
     }
     if(appMode==='add' && !manual) ocrStart(code);
