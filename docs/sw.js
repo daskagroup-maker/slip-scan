@@ -1,5 +1,5 @@
 // 改版時把版本號 +1
-const CACHE = 'slip-scan-v36';
+const CACHE = 'slip-scan-v39';
 const CORE = ['./', './index.html', './config.js', './manifest.webmanifest', './icon-192.png', './icon-512.png',
   'https://cdn.jsdelivr.net/npm/barcode-detector@3.2.2/dist/iife/ponyfill.js'];
 self.addEventListener('install', e => {
