@@ -333,7 +333,7 @@ body.camOn{overflow:hidden}
 .pickleft span{padding:6px 10px;border-radius:10px;font-weight:700;color:#222;font-size:15px}
 .lookup.yes{border:4px solid var(--ok);background:color-mix(in srgb,var(--ok) 12%,var(--card))}
 .lookup.no{border:4px solid var(--stamp);background:color-mix(in srgb,var(--stamp) 10%,var(--card))}
-.lookup .verdict{font-size:30px;font-weight:900;line-height:1.2}
+.lookup .verdict{font-size:26px;font-weight:900;line-height:1.2}
 .lookup.yes .verdict{color:var(--ok)} .lookup.no .verdict{color:var(--stamp)}
 .lookup{display:none;margin-top:10px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
 .lookup.on{display:block}
@@ -1069,7 +1069,7 @@ body.camOn{overflow:hidden}
   }
 
   /* ---------- 揀貨：選出貨日 → 掃箱子 → 綠色＝要出、紅色＝不是這天 ---------- */
-  let pickDay=TODAY;
+  let pickDay='';   // 預設「只找位置」，要揀貨再選日期
   function renderPick(){
     if($('pickPanel').hidden) return;
     const cnt={}; for(const d in days) days[d].items.forEach(i=>{ if(!i.done) cnt[d]=(cnt[d]||0)+1; });
@@ -1102,7 +1102,7 @@ body.camOn{overflow:hidden}
       } else {
         const h=hits[0];
         box.className='lookup on no';
-        box.innerHTML='<div class="verdict">✗ 不是 '+md(pickDay)+' 的</div><div class="code">'+esc(fmtCode(code))+'</div><div class="big"><div class="bd">'+md(h.date)+' 出貨</div></div>'+locOf(h.date,h.item)+'<div class="meta">放回去</div>';
+        box.innerHTML='<div class="verdict">✗ 放回去</div><div class="code">'+esc(fmtCode(code))+'</div><div class="big"><div class="bd">這張是 '+md(h.date)+' 出貨</div></div><div class="meta">（現在揀的是 '+md(pickDay)+'，這張不用拿）</div>'+locOf(h.date,h.item);
         buzz([80,60,80]); flash(false); return;
       }
     }
