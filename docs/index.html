@@ -1442,7 +1442,8 @@ body.camOn{overflow:hidden}
     const stk=STK(), G=CAP(), L=lix().get(lane), P=new Map();   // 'r|g' → {w, lv:Set}
     if(L) L.forEach((R,row)=>R.ids.forEach((idx,id)=>{ if(id===exceptId) return; const g=gOf(idx), k=row+'|'+g; let p=P.get(k); if(!p) P.set(k,p={r:row,g,w:R.cw?R.cw.get(id):R.w,lv:new Set()}); p.lv.add(lvOf(idx)); }));
     const freeLv=p=>{ for(let l=1;l<=stk;l++) if(!p.lv.has(l)) return l; return 0; };
-    const mine=[...P.values()].filter(p=>p.w===w && (!limit||p.r<=limit)).sort((a,b)=>a.r-b.r||a.g-b.g);
+    const K=k=>layout.pileMix?String(k).split('|')[0]:String(k);   // 歸貨照尺寸分：同顏色＋同尺寸才疊在一起
+    const mine=[...P.values()].filter(p=>K(p.w)===K(w) && (!limit||p.r<=limit)).sort((a,b)=>a.r-b.r||a.g-b.g);
     for(const p of mine){ const l=freeLv(p); if(l) return {row:p.r, idx:(p.g-1)*stk+l}; }
     if(onlyOld) return null;
     const empty=(r,g)=>!P.has(r+'|'+g);
@@ -1629,7 +1630,7 @@ body.camOn{overflow:hidden}
             const cs=pile.map(q=>{ const qw=wdOf(q.it.order); return qw==='x'?'#cfd5dd':'rgb('+colors[qw].rgb.join(',')+')'; });
             const bg=[...new Set(cs)].length===1?cs[0]:'linear-gradient(to top,'+cs.map((c,i)=>c+' '+(i*100/cs.length)+'% '+((i+1)*100/cs.length)+'%').join(',')+')';
             const any=f=>pile.some(f), stk=STK();
-            h+='<button class="ic full'+(any(q=>q.date===TODAY)?' t':'')+(any(q=>q.it.id===findHi)?' f':'')+(any(q=>q.it.id===cellHi)?' sel':'')+'" style="background:'+bg+'" data-cell="'+x.date+'|'+x.it.id+'" aria-label="第'+C.r+'列第'+k+'格，疊'+pile.length+'箱">'+(stk>1?'<b>'+pile.length+'</b><small>'+(layout.anySize?esc(sizeLbl(x.it.size)):'箱')+'</small>':k)+'</button>'; }
+            h+='<button class="ic full'+(any(q=>q.date===TODAY)?' t':'')+(any(q=>q.it.id===findHi)?' f':'')+(any(q=>q.it.id===cellHi)?' sel':'')+'" style="background:'+bg+'" data-cell="'+x.date+'|'+x.it.id+'" aria-label="第'+C.r+'列第'+k+'格，疊'+pile.length+'箱">'+(stk>1?'<b>'+pile.length+'</b><small>'+'箱'+'</small>':k)+'</button>'; }
           h+='</div>';
         });
         h+='</div><div class="vname"><b>'+esc(A.sub.n||'')+'</b> '+(layout.anySize?'':esc((A.sub.s||[]).length>2?A.sub.s[0]+'〜':(A.sub.s||[]).join('・')))+'<br><span class="meta">'+A.M.length+' 箱</span></div></div>';
