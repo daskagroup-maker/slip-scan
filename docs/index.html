@@ -1334,9 +1334,10 @@ body.camOn{overflow:hidden}
   // 一次性：改成「一開始就分顏色」，在庫的貨照新規則重排
   let bcMigrated=false;
   function migrateBC(){
-    if((+layout.bcv||0)>=2 || bcMigrated) return; bcMigrated=true;
-    layout.byColor=true; layout.cmode='dyn'; layout.bcv=2;
-    setTimeout(()=>{ saveLayout(); const n=replaceAll(); if(n) say('已改成「分顏色・依現場」，在庫 '+n+' 箱已重新排位置','ok'); }, 800);
+    if((+layout.bcv||0)>=3 || bcMigrated) return; bcMigrated=true;
+    // 照現場手繪：每區 2 直排、一排 7 格、每格一色往上疊 10 箱
+    layout.byColor=true; layout.cmode='dyn'; layout.stk=10; layout.cap=7; layout.maxRows=2; layout.bcv=3;
+    setTimeout(()=>{ saveLayout(); const n=replaceAll(); say('已改成：每區 2 排、一排 7 格、每格疊 10 箱'+(n?'（在庫 '+n+' 箱已重新排）':''),'ok'); }, 800);
   }
   let slotCache=new Map(), slotLayout=null;
   function slotOf(date){
@@ -1433,7 +1434,7 @@ body.camOn{overflow:hidden}
     const sp=tryLane(home.key,0); sp.ovf=''; sp.full=true; return sp;   // 整格都滿了 → 還是放原排，並提醒
   }
   /* 每格一色、往上疊（照現場手繪）：同顏色那疊還沒滿 → 疊上去；滿了 → 旁邊空的一格；新顏色 → 第一個空格 */
-  const pileMode=()=>dynColor() && STK()>1;
+  const pileMode=()=>byColor() && STK()>1;
   function pileSpot(lane,limit,w,exceptId){
     const stk=STK(), G=CAP(), L=lix().get(lane), P=new Map();   // 'r|g' → {w, lv:Set}
     if(L) L.forEach((R,row)=>R.ids.forEach((idx,id)=>{ if(id===exceptId) return; const g=gOf(idx), k=row+'|'+g; let p=P.get(k); if(!p) P.set(k,p={r:row,g,w:R.cw?R.cw.get(id):R.w,lv:new Set()}); p.lv.add(lvOf(idx)); }));
@@ -1485,7 +1486,7 @@ body.camOn{overflow:hidden}
   function saveLayout(){
     slotCache.clear(); LIX=null;
     try{ localStorage.setItem('slipLayout', JSON.stringify(layout)); }catch(_){}
-    if(mode==='db' && rtdb) rtdb.ref(ROOT+'/layout').set({names:layout.names||[], rows:layout.rows.map(row=>row.map(k=>(k||[]).join(',')||'-')), subs:(layout.subs||[]).map(x=>x.n+':'+(x.s||[]).join(',')), subDir:layout.subDir||'v', posFrom:layout.posFrom||'in', cap:CAP(), stk:STK(), compact:autoCompact(), byColor:byColor(), maxRows:MAXR(), bcv:2, resv:layout.resv||'', cmode:layout.cmode||'dyn'}).catch(()=>{});   // 雲端存字串，空格存 '-'
+    if(mode==='db' && rtdb) rtdb.ref(ROOT+'/layout').set({names:layout.names||[], rows:layout.rows.map(row=>row.map(k=>(k||[]).join(',')||'-')), subs:(layout.subs||[]).map(x=>x.n+':'+(x.s||[]).join(',')), subDir:layout.subDir||'v', posFrom:layout.posFrom||'in', cap:CAP(), stk:STK(), compact:autoCompact(), byColor:byColor(), maxRows:MAXR(), bcv:3, resv:layout.resv||'', cmode:layout.cmode||'dyn'}).catch(()=>{});   // 雲端存字串，空格存 '-'
   }
   let mapFilter='all', mapSel=null;
   const autoExp=()=>!$('autoExp') || $('autoExp').checked;
@@ -1596,7 +1597,7 @@ body.camOn{overflow:hidden}
       const byR={}; M.forEach(x=>{ (byR[x.it.row||0]=byR[x.it.row||0]||{})[x.it.idx||0]=x; });
       const used=Object.keys(byR).map(Number).filter(Boolean);
       let n=used.length?Math.max(...used):0;
-      n = byColor()&&!dynColor() ? Math.max(n,RESV_TOTAL()) : Math.max(n+(M.length?0:1),1);
+      n = pileMode() ? Math.max(n, MAXR()&&MAXR()<=8?MAXR():1) : byColor()&&!dynColor() ? Math.max(n,RESV_TOTAL()) : Math.max(n+(M.length?0:1),1);
       let depth=cap; Object.values(byR).forEach(R=>Object.keys(R).forEach(k=>depth=Math.max(depth,+k)));
       depth=Math.ceil(depth/STK());   // 幾格（每格往上疊 STK 箱）
       const cols=[]; for(let r=1;r<=Math.min(n,80);r++){
