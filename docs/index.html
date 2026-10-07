@@ -233,6 +233,44 @@ input[type=date],input[type=month]{flex:1;min-width:0;padding:8px 10px;border:1p
 .ic.t{box-shadow:inset 0 0 0 2px var(--stamp)}
 .ic.f{outline:3px solid #ff9500;outline-offset:0;z-index:1;animation:fpulse 1s ease-in-out 4}
 .ic.sel{outline:3px solid var(--ink);outline-offset:0;z-index:1}
+.w3d{overflow-x:auto;-webkit-overflow-scrolling:touch;background:linear-gradient(#f7f9fc,#eef2f6)}
+.w3d svg{display:block;width:100%;min-width:0;height:auto;font-family:inherit}
+.s3{cursor:pointer}
+.s3.sel .tile{stroke:#1d2a44;stroke-width:1.1}
+.s3.f polygon{animation:f3 1s ease-in-out 4}
+
+@keyframes f3{50%{opacity:.55}}
+@media (prefers-reduced-motion:reduce){.s3.f polygon{animation:none}}
+.t3n{font-size:5px;font-weight:900;text-anchor:middle;fill:#1d2a44;paint-order:stroke;stroke:#fff;stroke-width:1.2px}
+.t3t{font-size:3px;font-weight:900;text-anchor:middle;fill:#fff;paint-order:stroke;stroke:#c8372d;stroke-width:1.4px}
+.t3d{font-size:2.9px;fill:#8a93a3;font-weight:700;text-anchor:middle}
+.t3d .on{fill:#1d2a44;font-weight:900}
+.t3d .t3no{font-size:3.2px;fill:#1d2a44;font-weight:900}
+.t3a{font-size:2.6px;fill:#8a93a3;text-anchor:middle;letter-spacing:1px}
+.t3r{font-size:3.6px;fill:#1d2a44;font-weight:900;text-anchor:end;paint-order:stroke;stroke:#fff;stroke-width:.8px}
+.l3{cursor:pointer}
+.lane3d{display:block;width:100%;height:auto;font-family:inherit}
+.c3{cursor:pointer}
+.c3.f polygon{animation:f3 1s ease-in-out 5}
+.t4n{font-size:2.2px;font-weight:900;text-anchor:middle;fill:rgba(0,0,0,.6)}
+.t4l{font-size:2.8px;font-weight:900;text-anchor:middle;fill:#222}
+.t5a{font-size:2.6px;fill:#8a93a3;text-anchor:middle;font-weight:700}
+.t5l{font-size:2.4px;font-weight:900;text-anchor:middle;fill:#222}
+.t5c{font-size:1.7px;font-weight:700;text-anchor:middle;fill:#222}
+.t5n{font-size:2.6px;font-weight:900;text-anchor:middle;fill:#1d2a44}
+.t5n.on{fill:#c8372d}
+.vmap{display:flex;align-items:stretch;gap:0;overflow-x:auto;padding:6px 0}
+.vaisle{flex:0 0 26px;display:flex;align-items:center;justify-content:center;border-left:2px dashed var(--line);border-right:2px dashed var(--line);margin:0 3px;color:var(--ink2);font-weight:700}
+.varea{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;border-radius:10px;padding:4px}
+.varea.insel{outline:2px solid var(--ink)}
+.vcols{display:flex;gap:3px;width:100%}
+.vcol{display:flex;flex-direction:column;gap:3px;flex:1 1 0;min-width:18px;max-width:34px}
+.vcol.hi{outline:2px solid #ff9500;border-radius:4px}
+.vlab{height:30px;border-radius:5px;font-size:12px;font-weight:900;color:#222;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
+.vlab small{font-size:9px}
+.vcol .ic{height:30px;display:flex;align-items:baseline;justify-content:center;gap:1px;padding-top:4px}
+.vcol .ic b{font-size:15px;color:#222}.vcol .ic small{font-size:9px;color:#333}
+.vname{margin-top:6px;text-align:center;font-size:15px}
 .maplegend{align-items:center;display:flex;gap:14px;font-size:13px;color:var(--ink2);margin:8px 2px}
 .maplegend .lg{display:inline-block;width:14px;height:14px;border-radius:4px;vertical-align:-2px;margin-right:4px}
 .maplegend .lg.today{border:2px solid var(--stamp)}
@@ -375,6 +413,9 @@ body.camOn{overflow:hidden}
 .lpsubs button{flex:1;padding:12px 4px;border:2px solid var(--carbon);color:var(--carbon);border-radius:10px;background:var(--card);font-weight:900;font-size:16px}
 .sticky{display:flex;align-items:center;gap:8px;font-size:15px;zoom:var(--z)}
 .sticky button{border:1px solid currentColor;background:none;color:inherit;border-radius:8px;padding:5px 10px;font-weight:700}
+.sticky{flex-direction:column;align-items:stretch;gap:4px}
+.strow{display:flex;align-items:center;gap:8px}
+.strow.on{background:#ffd60a;color:#111;border-radius:10px;padding:6px 10px}
 .sticky.on{background:#ffd60a;color:#111;border-radius:10px;padding:6px 10px}
 .sticky.light{margin:0 0 10px;color:var(--ink2);zoom:1}
 .pickprog{font-size:18px;font-weight:900;margin:4px 0 8px}
@@ -614,6 +655,7 @@ body.camOn{overflow:hidden}
     <div class="mapsum" id="mapSum"></div>
     <div class="mapwarn" id="mapWarn" hidden></div>
     <div class="mapbanner" id="mapBanner" hidden></div>
+    <div class="mode smode" role="group" aria-label="地圖樣式" style="margin-top:6px"><button id="v3d" aria-pressed="true">🧊 3D</button><button id="v2d" aria-pressed="false">平面</button></div>
     <div class="mapwrap" id="map"></div>
     <div class="maplegend"><span><b class="lg today"></b>有今天出貨</span><span>粗體日期＝目前有貨</span><button class="linkbtn" id="mapEditBtn" style="margin-left:auto">✏️ 編輯位置</button></div>
     <div id="mapCell"></div>
@@ -932,11 +974,14 @@ body.camOn{overflow:hidden}
 
   /* ---------- 放置位置：自動 or 指定（固定一段時間都放同一個地方） ---------- */
   let stickyLoc=''; try{ stickyLoc=localStorage.getItem('slipSticky')||''; }catch(_){}
+  let stickyRow=0, stickyActive=false; try{ stickyRow=+localStorage.getItem('slipStickyRow')||0; }catch(_){}
   function locShort(loc){ return loc ? placeLabel(placeOf(TODAY,'',loc)) : ''; }
   function renderSticky(){
     const t = stickyLoc ? '📍 現在全部放：<b>'+esc(locShort(stickyLoc))+'</b>' : '📍 放置位置：自動（依出貨日）';
     const btn = stickyLoc ? '<button data-sticky="clear">改回自動</button>' : '<button data-sticky="set">指定位置</button>';
-    [$('stickyBar'),$('stickyMain')].forEach(el=>{ if(!el) return; el.innerHTML='<span style="flex:1">'+t+'</span>'+btn; el.classList.toggle('on', !!stickyLoc); });
+    const t2 = stickyRow ? '📏 現在放：<b>第 '+stickyRow+' 列</b>（滿了接下一列）' : '📏 列：自動';
+    const b2 = stickyRow ? '<button data-srow="clear">改回自動</button>' : '<button data-srow="set">指定列</button>';
+    [$('stickyBar'),$('stickyMain')].forEach(el=>{ if(!el) return; el.innerHTML='<div class="strow'+(stickyLoc?' on':'')+'"><span style="flex:1">'+t+'</span>'+btn+'</div><div class="strow'+(stickyRow?' on':'')+'"><span style="flex:1">'+t2+'</span>'+b2+'</div>'; el.classList.remove('on'); });
   }
   function setSticky(v){ stickyLoc=v||''; try{ localStorage.setItem('slipSticky',stickyLoc); }catch(_){} renderSticky(); if(camOn()) setStage(stage); }
   let lpCb=null, lpRow=null;
@@ -962,6 +1007,10 @@ body.camOn{overflow:hidden}
   });
   $('lpFreeOk').onclick=()=>{ const v=$('lpFree').value.trim(); if(!v) return; $('lpick').hidden=true; lpCb&&lpCb('x:'+v); };
   document.addEventListener('click',e=>{
+    const sr=e.target.closest('[data-srow]'); if(sr){
+      if(sr.dataset.srow==='clear') stickyRow=0;
+      else { const v=prompt('之後掃的貨，要從第幾列開始放？\n（這一列放滿了會自動接下一列）', stickyRow||''); if(v===null) return; stickyRow=Math.max(0,parseInt(v)||0); }
+      try{ localStorage.setItem('slipStickyRow',stickyRow); }catch(_){} renderSticky(); if(pending) renderSheet(); if(camOn()) setStage(stage); return; }
     const st=e.target.closest('[data-sticky]'); if(st){ if(st.dataset.sticky==='clear') setSticky(''); else openPicker('之後掃的全部放到…', stickyLoc, v=>setSticky(v)); return; }
     if(e.target.closest('#shLocBtn') && pending){ openPicker('這張放到…', pending.loc, v=>{ pending.loc=v; renderSheet(); }); return; }
   });
@@ -1097,7 +1146,8 @@ body.camOn{overflow:hidden}
     const d = days[date] || (days[date]={date, items:[]});
     const t = new Date();
     const item = {id:keyOf(code), code, size, order:order||'', loc:loc||'', note:'', t:pad(t.getHours())+':'+pad(t.getMinutes()), ts:Date.now()};
-    placeItem(date,item);
+    stickyActive=true; placeItem(date,item); stickyActive=false;
+    if(stickyRow>0 && item.row>stickyRow){ const old=stickyRow; stickyRow=item.row; try{ localStorage.setItem('slipStickyRow',stickyRow); }catch(_){} renderSticky(); camToast('第 '+old+' 列滿了','接著放第 '+stickyRow+' 列'); }
     d.items.unshift(item);
     freshId = item.id;
     say('已登記 '+fmtCode(code)+' → '+md(date)+'・'+sizeLbl(size),'ok');
@@ -1314,8 +1364,11 @@ body.camOn{overflow:hidden}
   const stkStyle=o=>o?'background:rgb('+colors[parse(o).getDay()].rgb.join(',')+');color:#222':'background:var(--carbon-soft);color:var(--carbon)';
   const colLbl=o=>o?COLNAME(parse(o).getDay())+'色':'無貼紙';
   // 位置的最後兩層：第幾列（由上往下）、第幾個（一列最多 cap 個）。每個貼紙顏色從新的一列開始
-  const CAP=()=>Math.max(1, +layout.cap || 15);
-  const spotTxt=sp=>sp&&sp.row?'・第 '+sp.row+' 列・第 '+sp.idx+' 個':'';
+  const CAP=()=>Math.max(1, +layout.cap || 15);          // 每列幾格
+  const STK=()=>Math.max(1, +layout.stk || 1);           // 每格往上疊幾箱
+  const RCAP=()=>CAP()*STK();                             // 一列總共幾箱
+  const gOf=i=>Math.ceil((i||1)/STK()), lvOf=i=>((i||1)-1)%STK()+1;   // 第幾格、由下往上第幾箱
+  const spotTxt=sp=>sp&&sp.row?(STK()>1?'・第 '+sp.row+' 列・第 '+gOf(sp.idx)+' 格（疊第 '+lvOf(sp.idx)+' 箱）':'・第 '+sp.row+' 列・第 '+sp.idx+' 個'):'';
   function locText(date,size,loc,sp,order){ if(sp && sp.ovf!==undefined) loc=sp.ovf; const P=placeOf(date,size,loc); return placeLabel(P)+(P?spotTxt(sp):'')+'（'+(P&&P.free==null?colLbl(order)+'・':'')+sizeLbl(size)+'）'+(P&&P.manual?' ✋':'')+(P&&P.ovf?'（原本那排滿了）':''); }
   const laneOnly=(date,size,loc)=>{ const P=placeOf(date,size,loc); return P?P.key:'none'; };
   const byColor=()=>layout.byColor!==false;
@@ -1336,9 +1389,9 @@ body.camOn{overflow:hidden}
   function lixAdd(lane,it){
     let L=LIX.get(lane); if(!L) LIX.set(lane, L=new Map());
     let R=L.get(it.row); if(!R) L.set(it.row, R={w:wdOf(it.order), ids:new Map()});
-    R.ids.set(it.id, it.idx); LPOS.set(it.id,[lane,it.row]);
+    R.ids.set(it.id, it.idx); (R.cw=R.cw||new Map()).set(it.id, wdOf(it.order)); LPOS.set(it.id,[lane,it.row]);
   }
-  function lixDel(id){ const p=LPOS&&LPOS.get(id); if(!p) return; const R=LIX.get(p[0])&&LIX.get(p[0]).get(p[1]); if(R){ R.ids.delete(id); if(!R.ids.size) LIX.get(p[0]).delete(p[1]); } LPOS.delete(id); }
+  function lixDel(id){ const p=LPOS&&LPOS.get(id); if(!p) return; const R=LIX.get(p[0])&&LIX.get(p[0]).get(p[1]); if(R){ R.ids.delete(id); if(R.cw) R.cw.delete(id); if(!R.ids.size) LIX.get(p[0]).delete(p[1]); } LPOS.delete(id); }
   function laneRows(lane, exceptId){
     const rows={}, L=lix().get(lane); if(!L) return rows;
     L.forEach((R,row)=>{ const idx=new Set(); R.ids.forEach((v,id)=>{ if(id!==exceptId) idx.add(v); }); if(idx.size) rows[row]={w:R.w, idx}; });
@@ -1347,8 +1400,13 @@ body.camOn{overflow:hidden}
   // 每排最多幾列（0＝不限）。滿了自動改放同一格的隔壁排
   const MAXR=()=>layout.maxRows===undefined?15:Math.max(0, +layout.maxRows||0);
   function allocSpot(date,size,loc,order,exceptId){
-    const w=wdOf(order), cap=CAP(), M=MAXR();
+    const w=wdOf(order), cap=RCAP(), M=MAXR();
+    if(stickyRow>0 && (stickyActive || exceptId==='__preview__')){   // 指定列：從第 N 列開始放，滿了接下一列
+      const lane=laneOnly(date,size,loc), rows=laneRows(lane,exceptId);
+      for(let r=stickyRow; r<stickyRow+200; r++){ const used=rows[r]?rows[r].idx:new Set(); for(let i=1;i<=cap;i++) if(!used.has(i)) return {row:r, idx:i, ovf:(loc&&loc.startsWith('o:'))?'':undefined}; }
+    }
     const tryLane=(lane,limit)=>{
+      if(pileMode()) return pileSpot(lane,limit,w,exceptId);
       const rows=laneRows(lane,exceptId);
       const mine=Object.keys(rows).map(Number).filter(r=>(!byColor() || rows[r].w===w) && (!limit || r<=limit)).sort((a,b)=>a-b);
       for(const r of mine){ for(let i=1;i<=cap;i++) if(!rows[r].idx.has(i)) return {row:r, idx:i}; }
@@ -1374,6 +1432,21 @@ body.camOn{overflow:hidden}
     for(const j of order2){ const lane=home.r+'-'+home.c+'-'+j, sp=tryLane(lane,M); if(sp){ sp.ovf = j===home.i ? '' : 'o:'+lane; sp.home=home.key; return sp; } }
     const sp=tryLane(home.key,0); sp.ovf=''; sp.full=true; return sp;   // 整格都滿了 → 還是放原排，並提醒
   }
+  /* 每格一色、往上疊（照現場手繪）：同顏色那疊還沒滿 → 疊上去；滿了 → 旁邊空的一格；新顏色 → 第一個空格 */
+  const pileMode=()=>dynColor() && STK()>1;
+  function pileSpot(lane,limit,w,exceptId){
+    const stk=STK(), G=CAP(), L=lix().get(lane), P=new Map();   // 'r|g' → {w, lv:Set}
+    if(L) L.forEach((R,row)=>R.ids.forEach((idx,id)=>{ if(id===exceptId) return; const g=gOf(idx), k=row+'|'+g; let p=P.get(k); if(!p) P.set(k,p={r:row,g,w:R.cw?R.cw.get(id):R.w,lv:new Set()}); p.lv.add(lvOf(idx)); }));
+    const freeLv=p=>{ for(let l=1;l<=stk;l++) if(!p.lv.has(l)) return l; return 0; };
+    const mine=[...P.values()].filter(p=>p.w===w && (!limit||p.r<=limit)).sort((a,b)=>a.r-b.r||a.g-b.g);
+    for(const p of mine){ const l=freeLv(p); if(l) return {row:p.r, idx:(p.g-1)*stk+l}; }
+    const empty=(r,g)=>!P.has(r+'|'+g);
+    if(mine.length){ const last=mine[mine.length-1];   // 接在同顏色旁邊
+      for(let d=1; d<G; d++) for(const g of [last.g+d,last.g-d]) if(g>=1&&g<=G&&empty(last.r,g)) return {row:last.r, idx:(g-1)*stk+1}; }
+    const maxR=Math.max(0,...[...P.values()].map(p=>p.r));
+    for(let r=1; r<=maxR+1; r++){ if(limit && r>limit) return null; for(let g=1; g<=G; g++) if(empty(r,g)) return {row:r, idx:(g-1)*stk+1}; }
+    return null;
+  }
   const previewSpot=(date,size,loc,order)=>allocSpot(date,size,loc,order,'__preview__');
   // 有貨被拿走 → 同一列後面的往前補（1,2,4,5 → 1,2,3,4）
   const autoCompact=()=>layout.compact!==false;
@@ -1383,6 +1456,8 @@ body.camOn{overflow:hidden}
     if(!sp || !sp.row || (!force && !autoCompact())) return 0;
     const L=[]; for(const d in days) for(const it of days[d].items) if(!gone(d,it) && it.row===sp.row && laneOnly(d,it.size,it.loc)===sp.lane) L.push([d,it]);
     L.sort((a,b)=>(a[1].idx||99)-(b[1].idx||99)); let n=0;
+    if(pileMode()){ const stk=STK(), cnt={};   // 每一疊自己往下補，不換格
+      withBulk(()=>L.forEach(([d,it])=>{ const g=gOf(it.idx); cnt[g]=(cnt[g]||0)+1; const v=(g-1)*stk+cnt[g]; if(it.idx!==v){ it.idx=v; putItem(d,it); n++; } })); return n; }
     withBulk(()=>L.forEach(([d,it],i)=>{ if(it.idx!==i+1){ it.idx=i+1; putItem(d,it); n++; } }));
     return n;
   }
@@ -1410,7 +1485,7 @@ body.camOn{overflow:hidden}
   function saveLayout(){
     slotCache.clear(); LIX=null;
     try{ localStorage.setItem('slipLayout', JSON.stringify(layout)); }catch(_){}
-    if(mode==='db' && rtdb) rtdb.ref(ROOT+'/layout').set({names:layout.names||[], rows:layout.rows.map(row=>row.map(k=>(k||[]).join(',')||'-')), subs:(layout.subs||[]).map(x=>x.n+':'+(x.s||[]).join(',')), subDir:layout.subDir||'v', posFrom:layout.posFrom||'in', cap:CAP(), compact:autoCompact(), byColor:byColor(), maxRows:MAXR(), bcv:2, resv:layout.resv||'', cmode:layout.cmode||'dyn'}).catch(()=>{});   // 雲端存字串，空格存 '-'
+    if(mode==='db' && rtdb) rtdb.ref(ROOT+'/layout').set({names:layout.names||[], rows:layout.rows.map(row=>row.map(k=>(k||[]).join(',')||'-')), subs:(layout.subs||[]).map(x=>x.n+':'+(x.s||[]).join(',')), subDir:layout.subDir||'v', posFrom:layout.posFrom||'in', cap:CAP(), stk:STK(), compact:autoCompact(), byColor:byColor(), maxRows:MAXR(), bcv:2, resv:layout.resv||'', cmode:layout.cmode||'dyn'}).catch(()=>{});   // 雲端存字串，空格存 '-'
   }
   let mapFilter='all', mapSel=null;
   const autoExp=()=>!$('autoExp') || $('autoExp').checked;
@@ -1420,12 +1495,192 @@ body.camOn{overflow:hidden}
     return out;
   }
   let mapEdit=false, findHi=null, cellHi=null;
+  /* ===== 3D 倉庫圖（等角視角）：每格的貨疊成一堆，高度＝箱數，顏色＝貼紙顏色 ===== */
+  let view3d=true; try{ view3d=localStorage.getItem('slipV3d')!=='0'; }catch(_){}
+  function draw3D(cell, focus){
+    // 斜前方俯視（像站在倉庫門口看）：x＝左右、y＝前後（0＝最裡面）、z＝高度
+    const W=10, D=9, G=2.4, A=15, KX=-0.32, KY=0.62;
+    const P=(x,y,z)=>[x + y*KX, y*KY - z];
+    const rowsN=layout.rows.length, colsN=Math.max(...layout.rows.map(r=>r.length));
+    let maxC=1; layout.rows.forEach((row,r)=>row.forEach((k,c)=>{ maxC=Math.max(maxC,(cell[r+'-'+c]||[]).length); }));
+    const HMAX=18;
+    const pts=a=>a.map(p=>p[0].toFixed(2)+','+p[1].toFixed(2)).join(' ');
+    const shade=(rgb,f)=>'rgb('+rgb.map(v=>Math.max(0,Math.min(255,Math.round(v*f)))).join(',')+')';
+    const prism=(x,y,z,w,d,h,rgb)=>{
+      const top=[P(x,y,z+h),P(x+w,y,z+h),P(x+w,y+d,z+h),P(x,y+d,z+h)];
+      const fr=[P(x,y+d,z),P(x+w,y+d,z),P(x+w,y+d,z+h),P(x,y+d,z+h)];
+      const rt=[P(x+w,y,z),P(x+w,y+d,z),P(x+w,y+d,z+h),P(x+w,y,z+h)];
+      return '<polygon points="'+pts(rt)+'" fill="'+shade(rgb,.70)+'" stroke="rgba(0,0,0,.28)" stroke-width=".18"/>'+
+             '<polygon points="'+pts(fr)+'" fill="'+shade(rgb,.86)+'" stroke="rgba(0,0,0,.28)" stroke-width=".18"/>'+
+             '<polygon points="'+pts(top)+'" fill="'+shade(rgb,1.05)+'" stroke="rgba(0,0,0,.28)" stroke-width=".18"/>';
+    };
+    const XW=colsN*(W+G)-G, rowY=r=>r*(D+A);
+    const YD=rowY(rowsN-1)+D;
+    let out='<polygon points="'+pts([P(-2,-2,0),P(XW+2,-2,0),P(XW+2,YD+11,0),P(-2,YD+11,0)])+'" fill="#eef1f5" stroke="#cfd6df" stroke-width=".3"/>';
+    for(let r=0;r<rowsN-1;r++){ const y1=rowY(r)+D+8.5, y2=rowY(r+1)-1.2;
+      out+='<polygon points="'+pts([P(-2,y1,0),P(XW+2,y1,0),P(XW+2,y2,0),P(-2,y2,0)])+'" fill="#fafbfc"/>';
+      const m=P(XW/2,(y1+y2)/2,0); out+='<text x="'+m[0].toFixed(1)+'" y="'+(m[1]+1).toFixed(1)+'" class="t3a">通　道</text>'; }
+    let labels='';
+    let rowLab='';
+    layout.rows.forEach((row,r)=>{
+      labels='';
+      const lp=P(-6, rowY(r)+D/2, 0); rowLab+='<text x="'+lp[0].toFixed(1)+'" y="'+(lp[1]+1).toFixed(1)+'" class="t3r">'+esc((layout.names&&layout.names[r])||('第'+(r+1)+'排'))+'</text>';
+      row.forEach((keys,c)=>{
+        const id=r+'-'+c, L=cell[id]||[], x=c*(W+G), y=rowY(r);
+        const isToday=L.some(q=>q.date===TODAY), isFound=(findHi&&L.some(q=>q.it.id===findHi))||(focus&&L.length);
+        const sel = mapSel && !mapSel.startsWith('x:') && mapSel.split('-').slice(0,2).join('-')===id;
+        let g='<g class="s3'+(isToday?' t':'')+(isFound?' f':'')+(sel?' sel':'')+'" data-slot="'+id+'"'+(isFound?' data-found="1"':'')+'>';
+        g+='<polygon class="tile" points="'+pts([P(x,y,0),P(x+W,y,0),P(x+W,y+D,0),P(x,y+D,0)])+'" fill="'+(L.length?'#dde3ea':'#f6f8fa')+'" stroke="'+(isToday?'#c8372d':isFound?'#ff9500':'#a9b3bf')+'" stroke-width="'+(isToday||isFound?.9:.3)+'"/>';
+        let h=0;
+        if(L.length){
+          h=Math.max(1.6, HMAX*Math.sqrt(L.length/maxC));
+          const cw={}; L.forEach(q=>{ const w=wdOf(q.it.order); cw[w]=(cw[w]||0)+1; });
+          let z=0; [...WD_ORDER,'x'].filter(w=>cw[w]).forEach(w=>{ const hh=h*cw[w]/L.length; g+=prism(x+.9,y+.9,z,W-1.8,D-1.8,hh, w==='x'?[200,206,214]:colors[w].rgb); z+=hh; });
+        }
+        out+=g+'</g>';
+        const tp=P(x+W/2,y+D/2,h);
+        if(L.length) labels+='<text x="'+tp[0].toFixed(1)+'" y="'+(tp[1]-1.6).toFixed(1)+'" class="t3n" data-slot="'+id+'">'+L.length+'</text>'+(isToday?'<text x="'+tp[0].toFixed(1)+'" y="'+(tp[1]-6.2).toFixed(1)+'" class="t3t">今天</text>':'');
+        const fp=P(x+W/2, y+D+1.4, 0);
+        labels+='<text x="'+fp[0].toFixed(1)+'" y="'+(fp[1]+2).toFixed(1)+'" class="t3d"><tspan class="t3no">'+(c+1)+'</tspan>'+keys.map((k,j)=>'<tspan x="'+fp[0].toFixed(1)+'" dy="'+(j?3.1:3.4)+'"'+(L.some(q=>q.date.slice(5)===k)?' class="on"':'')+'>'+mdk(k)+'</tspan>').join('')+'</text>';
+      });
+      out+=labels;
+    });
+    const corners=[P(-2,-2,0),P(XW+2,-2,0),P(XW+2,YD+11,0),P(-2,YD+11,0),P(0,0,HMAX+9),P(XW,0,HMAX+9)];
+    const minX=Math.min(...corners.map(p=>p[0]))-13, maxX=Math.max(...corners.map(p=>p[0]))+2, minY=Math.min(...corners.map(p=>p[1]))-2, maxY=Math.max(...corners.map(p=>p[1]))+3;
+    return '<div class="w3d"><svg viewBox="'+minX.toFixed(1)+' '+minY.toFixed(1)+' '+(maxX-minX).toFixed(1)+' '+(maxY-minY).toFixed(1)+'" role="img" aria-label="倉庫 3D 圖">'+out+rowLab+'</svg></div>'+
+      '<p class="meta" style="margin:4px 8px">高度＝箱數，顏色＝貼紙顏色（下面白、上面紫）。點任何一堆看裡面怎麼擺。</p>';
+  }
+  /* 格子內部 3D：一列 15 個小箱子，第 1 列在最裡面（最上面），往前排 */
+  function draw3DLane(byR, order, cap){
+    const U=4, GX=.5, RD=6.6, H=2.2, KX=-0.22, KY=0.9;
+    const P=(x,y,z)=>[x + y*KX, y*KY - z];
+    const pts=a=>a.map(p=>p[0].toFixed(2)+','+p[1].toFixed(2)).join(' ');
+    const shade=(rgb,f)=>'rgb('+rgb.map(v=>Math.max(0,Math.min(255,Math.round(v*f)))).join(',')+')';
+    let n=cap; order.forEach(r=>{ const R=byR[r]||{}; Object.keys(R).forEach(k=>n=Math.max(n,+k)); });
+    const LW=11, XW=LW+n*(U+GX), YD=order.length*RD+1;
+    let out='<polygon points="'+pts([P(-1,-1,0),P(XW+1,-1,0),P(XW+1,YD,0),P(-1,YD,0)])+'" fill="#eef1f5" stroke="#cfd6df" stroke-width=".25"/>';
+    order.forEach((r,ri)=>{
+      const R=byR[r]||{}, items=Object.values(R), y=ri*RD+.6;
+      const fixedW = byColor() && !dynColor() ? colorOfRow(r) : null;
+      const ws=[...new Set(items.map(x=>wdOf(x.it.order)))], w = fixedW!=null?fixedW : (ws.length===1?ws[0]:null);
+      const lbg = w==null||w==='x' ? [210,216,224] : colors[w].rgb;
+      const hi=items.some(x=>x.it.id===findHi);
+      // 列名牌（地上）
+      out+='<polygon points="'+pts([P(0,y,0),P(LW-1.2,y,0),P(LW-1.2,y+U,0),P(0,y+U,0)])+'" fill="'+shade(lbg,1)+'" stroke="'+(hi?'#ff9500':'rgba(0,0,0,.25)')+'" stroke-width="'+(hi?.8:.2)+'"/>';
+      const lp=P((LW-1.2)/2, y+U/2, 0);
+      out+='<text x="'+lp[0].toFixed(2)+'" y="'+(lp[1]+.9).toFixed(2)+'" class="t4l">'+r+(w==null?'':' '+(w==='x'?'無':esc(COLNAME(w))))+'</text>';
+      for(let k=1;k<=n;k++){
+        const x0=LW+(k-1)*(U+GX), q=R[k];
+        if(!q){ out+='<polygon points="'+pts([P(x0,y,0),P(x0+U,y,0),P(x0+U,y+U,0),P(x0,y+U,0)])+'" fill="none" stroke="#c3cad4" stroke-width=".18" stroke-dasharray=".6 .5"/>'; continue; }
+        const qw=wdOf(q.it.order), rgb = qw==='x'?[205,211,219]:colors[qw].rgb;
+        const isT=q.date===TODAY, isF=q.it.id===findHi, isS=q.it.id===cellHi;
+        const top=[P(x0,y,H),P(x0+U,y,H),P(x0+U,y+U,H),P(x0,y+U,H)];
+        const fr=[P(x0,y+U,0),P(x0+U,y+U,0),P(x0+U,y+U,H),P(x0,y+U,H)];
+        const rt=[P(x0+U,y,0),P(x0+U,y+U,0),P(x0+U,y+U,H),P(x0+U,y,H)];
+        const st=isS?'#1d2a44':isF?'#ff9500':isT?'#c8372d':'rgba(0,0,0,.3)', sw=(isS||isF||isT)?.6:.15;
+        out+='<g class="c3'+(isF?' f':'')+'" data-cell="'+q.date+'|'+q.it.id+'">'+
+          '<polygon points="'+pts(rt)+'" fill="'+shade(rgb,.70)+'" stroke="'+st+'" stroke-width="'+sw+'"/>'+
+          '<polygon points="'+pts(fr)+'" fill="'+shade(rgb,.86)+'" stroke="'+st+'" stroke-width="'+sw+'"/>'+
+          '<polygon points="'+pts(top)+'" fill="'+shade(rgb,1.05)+'" stroke="'+st+'" stroke-width="'+sw+'"/>';
+        const tp=P(x0+U/2,y+U/2,H); out+='<text x="'+tp[0].toFixed(2)+'" y="'+(tp[1]+.8).toFixed(2)+'" class="t4n">'+k+'</text></g>';
+      }
+    });
+    const c=[P(-1,-1,0),P(XW+1,-1,0),P(XW+1,YD,0),P(-1,YD,0),P(0,0,H+1),P(XW,0,H+1)];
+    const minX=Math.min(...c.map(p=>p[0]))-1, maxX=Math.max(...c.map(p=>p[0]))+1, minY=Math.min(...c.map(p=>p[1]))-1, maxY=Math.max(...c.map(p=>p[1]))+1;
+    return '<svg class="lane3d" viewBox="'+minX.toFixed(1)+' '+minY.toFixed(1)+' '+(maxX-minX).toFixed(1)+' '+(maxY-minY).toFixed(1)+'" role="img" aria-label="這一排的 3D 圖">'+out+'</svg>';
+  }
+  /* 照現場手繪圖：尺寸區左右並排、中間是通路；每一「列」是直的一排（由上往下放），列號由左往右 */
+  function slotAreas(sid, S, cell, cap){
+    return S.map((sub,i)=>{
+      const M=cell[sid+'-'+(S.length&&sub.n!==''?i:-1)]||cell[sid+'-'+i]||[];
+      const byR={}; M.forEach(x=>{ (byR[x.it.row||0]=byR[x.it.row||0]||{})[x.it.idx||0]=x; });
+      const used=Object.keys(byR).map(Number).filter(Boolean);
+      let n=used.length?Math.max(...used):0;
+      n = byColor()&&!dynColor() ? Math.max(n,RESV_TOTAL()) : Math.max(n+(M.length?0:1),1);
+      let depth=cap; Object.values(byR).forEach(R=>Object.keys(R).forEach(k=>depth=Math.max(depth,+k)));
+      depth=Math.ceil(depth/STK());   // 幾格（每格往上疊 STK 箱）
+      const cols=[]; for(let r=1;r<=Math.min(n,80);r++){
+        const R=byR[r]||{}, items=Object.values(R), fixedW = byColor()&&!dynColor() ? colorOfRow(r) : null;
+        const ws=[...new Set(items.map(x=>wdOf(x.it.order)))], w = fixedW!=null?fixedW:(ws.length===1?ws[0]:null);
+        const G={}; items.forEach(x=>{ const g=gOf(x.it.idx); (G[g]=G[g]||[]).push(x); }); Object.values(G).forEach(a=>a.sort((p,q)=>(p.it.idx||0)-(q.it.idx||0)));
+        cols.push({r, R:G, w, hi:items.some(x=>x.it.id===findHi)});
+      }
+      return {sub, i, M, cols, depth};
+    });
+  }
+  function drawSlotV(sid, S, cell, si, cap){
+    const areas=slotAreas(sid,S,cell,cap);
+    if(!view3d){   // 平面
+      let h='<div class="vmap">';
+      areas.forEach((A,ai)=>{
+        if(ai) h+='<div class="vaisle"><span>通<br>路</span></div>';
+        h+='<div class="varea'+(si===A.i?' insel':'')+'"'+(si===A.i?' id="inSel"':'')+'><div class="vcols">';
+        A.cols.forEach(C=>{
+          const lbg = C.w==null||C.w==='x' ? 'var(--line)' : 'rgb('+colors[C.w].rgb.join(',')+')';
+          h+='<div class="vcol'+(C.hi?' hi':'')+'"><span class="vlab" style="background:var(--line)">'+C.r+'</span>';
+          for(let k=1;k<=A.depth;k++){ const pile=C.R[k];
+            if(!pile||!pile.length){ h+='<span class="ic"></span>'; continue; }
+            const x=pile.find(q=>q.it.id===findHi)||pile.find(q=>q.it.id===cellHi)||pile[pile.length-1];
+            const cs=pile.map(q=>{ const qw=wdOf(q.it.order); return qw==='x'?'#cfd5dd':'rgb('+colors[qw].rgb.join(',')+')'; });
+            const bg=[...new Set(cs)].length===1?cs[0]:'linear-gradient(to top,'+cs.map((c,i)=>c+' '+(i*100/cs.length)+'% '+((i+1)*100/cs.length)+'%').join(',')+')';
+            const any=f=>pile.some(f), stk=STK();
+            h+='<button class="ic full'+(any(q=>q.date===TODAY)?' t':'')+(any(q=>q.it.id===findHi)?' f':'')+(any(q=>q.it.id===cellHi)?' sel':'')+'" style="background:'+bg+'" data-cell="'+x.date+'|'+x.it.id+'" aria-label="第'+C.r+'列第'+k+'格，疊'+pile.length+'箱">'+(stk>1?'<b>'+pile.length+'</b><small>箱</small>':k)+'</button>'; }
+          h+='</div>';
+        });
+        h+='</div><div class="vname"><b>'+esc(A.sub.n||'')+'</b> '+esc((A.sub.s||[]).length>2?A.sub.s[0]+'〜':(A.sub.s||[]).join('・'))+'<br><span class="meta">'+A.M.length+' 箱</span></div></div>';
+      });
+      return h+'</div>';
+    }
+    // 3D
+    const U=4, GX=.7, DY=4.6, LH=8, AW=9, H=2.4, KX=-0.18, KY=0.78, HS=STK()>1?Math.min(2.4,4.2/STK()):H;
+    const P=(x,y,z)=>[x + y*KX, y*KY - z];
+    const pts=a=>a.map(p=>p[0].toFixed(2)+','+p[1].toFixed(2)).join(' ');
+    const shade=(rgb,f)=>'rgb('+rgb.map(v=>Math.max(0,Math.min(255,Math.round(v*f)))).join(',')+')';
+    const depth=Math.max(...areas.map(A=>A.depth));
+    let x=0; const pos=[];
+    areas.forEach((A,ai)=>{ if(ai) x+=AW; pos.push(x); x+=A.cols.length*(U+GX)-GX; });
+    const XW=x, YD=LH+depth*DY, FR=STK()>1, PY=FR?YD:0, EX=FR?6.8:0;   // 疊高時列名牌放前面，才不會被擋住
+    let out='<polygon points="'+pts([P(-1.5,-1,0),P(XW+1.5,-1,0),P(XW+1.5,YD+7+EX,0),P(-1.5,YD+7+EX,0)])+'" fill="#eef1f5" stroke="#cfd6df" stroke-width=".25"/>';
+    areas.forEach((A,ai)=>{ if(ai){ const ax=pos[ai]-AW+.8, aw=AW-1.6;
+      out+='<polygon points="'+pts([P(ax,-1,0),P(ax+aw,-1,0),P(ax+aw,YD+7+EX,0),P(ax,YD+7+EX,0)])+'" fill="#fbfcfd" stroke="#d6dbe2" stroke-dasharray="1 1" stroke-width=".25"/>';
+      const m=P(ax+aw/2, YD/2, 0); out+='<text x="'+m[0].toFixed(1)+'" y="'+m[1].toFixed(1)+'" class="t5a">通</text><text x="'+m[0].toFixed(1)+'" y="'+(m[1]+4).toFixed(1)+'" class="t5a">路</text>'; } });
+    // 列名牌（最裡面）
+    areas.forEach((A,ai)=>A.cols.forEach((C,ci)=>{ const x0=pos[ai]+ci*(U+GX);
+      const lbg = [214,220,228];
+      out+='<polygon points="'+pts([P(x0,PY,0),P(x0+U,PY,0),P(x0+U,PY+LH-3.4,0),P(x0,PY+LH-3.4,0)])+'" fill="'+shade(lbg,1)+'" stroke="'+(C.hi?'#ff9500':'rgba(0,0,0,.25)')+'" stroke-width="'+(C.hi?.7:.2)+'"/>';
+      const lp=P(x0+U/2,PY+(LH-3.4)/2,0); out+='<text x="'+lp[0].toFixed(2)+'" y="'+(lp[1]+1.1).toFixed(2)+'" class="t5l">'+C.r+'</text>';
+    }));
+    // 箱子：由裡到外、由左到右
+    for(let k=1;k<=depth;k++){
+      areas.forEach((A,ai)=>A.cols.forEach((C,ci)=>{
+        const x0=pos[ai]+ci*(U+GX), y=LH+(k-1)*DY, pile=C.R[k]||[];
+        if(k>A.depth) return;
+        if(!pile.length){ out+='<polygon points="'+pts([P(x0,y,0),P(x0+U,y,0),P(x0+U,y+DY-.6,0),P(x0,y+DY-.6,0)])+'" fill="none" stroke="#c3cad4" stroke-width=".18" stroke-dasharray=".6 .5"/>'; return; }
+        pile.forEach((q,li)=>{
+        const qw=wdOf(q.it.order), rgb=qw==='x'?[205,211,219]:colors[qw].rgb, d=DY-.6, z0=li*HS, z1=z0+HS;
+        const isT=q.date===TODAY, isF=q.it.id===findHi, isS=q.it.id===cellHi;
+        const st=isS?'#1d2a44':isF?'#ff9500':isT?'#c8372d':'rgba(0,0,0,.3)', sw=(isS||isF||isT)?.6:.15;
+        const top=[P(x0,y,z1),P(x0+U,y,z1),P(x0+U,y+d,z1),P(x0,y+d,z1)], fr=[P(x0,y+d,z0),P(x0+U,y+d,z0),P(x0+U,y+d,z1),P(x0,y+d,z1)], rt=[P(x0+U,y,z0),P(x0+U,y+d,z0),P(x0+U,y+d,z1),P(x0+U,y,z1)];
+        out+='<g class="c3'+(isF?' f':'')+'" data-cell="'+q.date+'|'+q.it.id+'"><polygon points="'+pts(rt)+'" fill="'+shade(rgb,.70)+'" stroke="'+st+'" stroke-width="'+sw+'"/><polygon points="'+pts(fr)+'" fill="'+shade(rgb,.86)+'" stroke="'+st+'" stroke-width="'+sw+'"/><polygon points="'+pts(top)+'" fill="'+shade(rgb,1.05)+'" stroke="'+st+'" stroke-width="'+sw+'"/>';
+        if(li===pile.length-1){ const tp=P(x0+U/2,y+d/2,z1); out+='<text x="'+tp[0].toFixed(2)+'" y="'+(tp[1]+.7).toFixed(2)+'" class="t4n">'+(STK()>1?pile.length:k)+'</text>'; }
+        out+='</g>'; });
+      }));
+    }
+    // 尺寸區名稱（最前面）
+    areas.forEach((A,ai)=>{ const w=A.cols.length*(U+GX)-GX, p=P(pos[ai]+w/2, YD+4+EX, 0);
+      out+='<text x="'+p[0].toFixed(1)+'" y="'+p[1].toFixed(1)+'" class="t5n'+(si===A.i?' on':'')+'">'+esc(A.sub.n||'')+(A.cols.length>3?'（'+esc((A.sub.s||[]).length>2?A.sub.s[0]+'〜':(A.sub.s||[]).join('/'))+'）':' ')+A.M.length+'箱</text>'; });
+    const c=[P(-1.5,-1,0),P(XW+1.5,-1,0),P(XW+1.5,YD+7+EX,0),P(-1.5,YD+7+EX,0),P(0,LH,Math.max(H,HS*STK())+1)];
+    const minX=Math.min(...c.map(p=>p[0]))-1, maxX=Math.max(...c.map(p=>p[0]))+1, minY=Math.min(...c.map(p=>p[1]))-1, maxY=Math.max(...c.map(p=>p[1]))+1;
+    const ncol=areas.reduce((a,A)=>a+A.cols.length,0);
+    return '<div class="w3d" style="background:none"><svg class="lane3d" style="min-width:'+(ncol>10?ncol*24:0)+'px;max-width:'+Math.max(320,ncol*70+120)+'px;margin:0 auto" viewBox="'+minX.toFixed(1)+' '+minY.toFixed(1)+' '+(maxX-minX).toFixed(1)+' '+(maxY-minY).toFixed(1)+'" role="img" aria-label="格子內部 3D 圖">'+out+'</svg></div>';
+  }
+  const setView=v=>{ view3d=v; try{ localStorage.setItem('slipV3d',v?'1':'0'); }catch(_){} $('v3d').setAttribute('aria-pressed',v); $('v2d').setAttribute('aria-pressed',!v); renderMap(); };
   // 那一列的 15 格，找到的那一格標出來
   function rowStrip(date,it){
     if(!it.row) return '';
     const lane=laneOnly(date,it.size,it.loc), used=new Set();
     for(const d in days) for(const x of days[d].items) if(!gone(d,x) && x.row===it.row && laneOnly(d,x.size,x.loc)===lane) used.add(x.idx);
-    const cap=Math.max(CAP(), it.idx||0); let h='<div class="strip"><span>第 '+it.row+' 列</span>';
+    const cap=Math.max(RCAP(), it.idx||0); let h='<div class="strip"><span>第 '+it.row+' 列</span>';
     for(let i=1;i<=cap;i++) h+='<i class="'+(i===it.idx?'me':used.has(i)?'on':'')+'">'+(i===it.idx?i:'')+'</i>';
     return h+'</div>';
   }
@@ -1484,7 +1739,8 @@ body.camOn{overflow:hidden}
         S.map((x,i)=>'<label class="ledit"><input data-subn="'+i+'" value="'+esc(x.n)+'" style="flex:0 0 4.5em" placeholder="名稱"><input data-subs="'+i+'" value="'+esc((x.s||[]).join(', '))+'" placeholder="尺寸，例：100, 120"></label>').join('')+
         '<label class="ledit"><span>小格排列</span><select id="subDir" style="flex:1;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--card);font-size:16px;color:var(--ink)"><option value="v"'+(layout.subDir!=='h'?' selected':'')+'>直的（左右並排）</option><option value="h"'+(layout.subDir==='h'?' selected':'')+'>橫的（上下疊）</option></select></label>'+
         '<label class="ledit"><span>每排最多</span><input id="mrIn" type="number" min="0" value="'+MAXR()+'" style="flex:0 0 5em"><span style="width:auto">列（滿了放隔壁排，0＝不限）</span></label>'+
-        '<label class="ledit"><span>每列可放</span><input id="capIn" type="number" min="1" value="'+CAP()+'" style="flex:0 0 5em"><span style="width:auto">個</span></label>'+
+        '<label class="ledit"><span>每列可放</span><input id="capIn" type="number" min="1" value="'+CAP()+'" style="flex:0 0 5em"><span style="width:auto">格</span></label>'+
+        '<label class="ledit"><span>每格往上疊</span><input id="stkIn" type="number" min="1" value="'+STK()+'" style="flex:0 0 5em"><span style="width:auto">箱（不疊＝1）</span></label>'+
         '<label class="ledit"><span>放的順序</span><select id="bcIn" style="flex:1;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--card);font-size:16px;color:var(--ink)"><option value="d"'+(dynColor()?' selected':'')+'>分顏色・依現場（多的接在同顏色旁邊）</option><option value="1"'+(byColor()&&!dynColor()?' selected':'')+'>分顏色・固定列（白第1列、黃第2列…）</option><option value="0"'+(!byColor()?' selected':'')+'>不分顏色・照順序放</option></select></label>'+
         '<div class="ledit" style="flex-wrap:wrap"><span>每色預留</span><span class="resv">'+WD_ORDER.map(w=>'<label style="background:rgb('+colors[w].rgb.join(',')+')">'+esc(COLNAME(w))+'<input data-resv="'+w+'" type="number" min="1" value="'+RESV(w)+'"></label>').join('')+'</span><span class="meta" style="width:100%">列（只有「固定列」才用。例如白色比較多，白填 2，白就用第 1～2 列）</span></div>'+
         '<label class="ledit"><span>拿走後</span><select id="cmpIn" style="flex:1;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--card);font-size:16px;color:var(--ink)"><option value="1"'+(autoCompact()?' selected':'')+'>後面的往前補（自動重新排號）</option><option value="0"'+(!autoCompact()?' selected':'')+'>留空位，下次放進來補</option></select></label>'+
@@ -1493,6 +1749,7 @@ body.camOn{overflow:hidden}
         '<button class="donebtn" id="replaceBtn" style="margin:8px 0">⟳ 在庫的貨全部照目前規則重新排位置</button>'+
         '<p class="meta" style="font-size:15px">上面：每格輸入要放的出貨日（月/日），兩個日期用逗號分開。<br>這裡：每個小格放哪些尺寸，沒列到的尺寸會放最後一個小格。名稱清空＝刪除。</p></div>';
     }
+    if(view3d && !mapEdit) h=draw3D(cell, focus);
     $('map').innerHTML=h;
     { const inGrid=all.length-none.length-Object.values(free).reduce((a,b)=>a+b.length,0);
       const fl = mapFilter==='today'?'今天出貨':mapFilter==='tmr'?'明天出貨':want?md(want)+' 出貨':'全部在庫';
@@ -1526,8 +1783,9 @@ body.camOn{overflow:hidden}
       const [rr,cc,si]=slotSel, sid=rr+'-'+cc, keys=layout.rows[rr]&&layout.rows[rr][cc]||[], L=cell[sid]||[];
       let out=noneTxt+'<div class="inhead"><b>📍 '+esc(slotName({r:rr,c:cc}))+'</b>　'+keys.map(mdk).join('・')+'　共 '+L.length+' 箱</div><button class="donebtn" data-slot="'+sid+'" style="margin:2px 0 6px">✕ 關閉，回到全部</button>';
       out+='<div class="inlegend">每一格＝一箱，顏色＝貼紙顏色　<i class="lg2 t"></i>今天出貨　<i class="lg2 f"></i>正在找的</div>';
-      const cap=CAP(), up=layout.posFrom!=='aisle';
-      (S.length?S:[{n:'',s:[]}]).forEach((sub,i)=>{
+      const cap=RCAP(), up=layout.posFrom!=='aisle';
+      if(layout.colDir!=='h'){ out+=drawSlotV(sid, S.length?S:[{n:'',s:[]}], cell, si, cap); }
+      else (S.length?S:[{n:'',s:[]}]).forEach((sub,i)=>{
         const M=cell[sid+'-'+(S.length?i:-1)]||[];
         const byR={}; M.forEach(x=>{ (byR[x.it.row||0]=byR[x.it.row||0]||{})[x.it.idx||0]=x; });
         let rowsN=Object.keys(byR).map(Number).filter(Boolean);
@@ -1536,6 +1794,7 @@ body.camOn{overflow:hidden}
         const loc=S.map((x,j)=>'<i class="'+(j===i?'on':'')+'"></i>').join('');
         out+='<div class="inblk'+(si===i?' insel':'')+'" '+(si===i?'id="inSel"':'')+'><div class="inbh"><span class="locmini">'+loc+'</span><b>'+esc(sub.n||'')+'</b>　'+esc((sub.s||[]).length>2?sub.s[0]+'〜':(sub.s||[]).join('・'))+'<span class="meta" style="margin-left:auto">'+M.length+' 箱</span></div>';
         const order=[]; for(let r=1;r<=Math.min(maxR,80);r++) order.push(r); if(!up) order.reverse();
+        if(view3d){ out+=draw3DLane(byR, order, cap)+'</div>'; return; }
         out+='<div class="ingrid" style="--cap:'+cap+'">';
         order.forEach(r=>{
           const R=byR[r]||{}, items=Object.values(R);
@@ -1574,7 +1833,7 @@ body.camOn{overflow:hidden}
           const L=R[r].sort((a,b)=>(a.it.idx||99)-(b.it.idx||99)), ws=[...new Set(L.map(x=>wdOf(x.it.order)))], w=ws.length===1?ws[0]:'m';
           const openIt = !many || L.some(x=>findHi===x.it.id);
           const bg = (w==='x'||w==='m')?'var(--line)':'rgb('+colors[w].rgb.join(',')+')';
-          out+='<details class="rowdet"'+(openIt?' open':'')+'><summary class="dgrp" style="border-left:8px solid '+bg+';padding-left:8px"><b>第 '+r+' 列</b>　'+(w==='x'?'無貼紙':w==='m'?'':esc(COLNAME(w))+'色')+'　'+L.length+' / '+CAP()+' 個 <button class="donebtn" data-compact="'+esc(laneOnly(L[0].date,L[0].it.size,L[0].it.loc))+'|'+r+'" style="margin-left:6px">⟳ 重新排號</button></summary><ul class="list">'+
+          out+='<details class="rowdet"'+(openIt?' open':'')+'><summary class="dgrp" style="border-left:8px solid '+bg+';padding-left:8px"><b>第 '+r+' 列</b>　'+(w==='x'?'無貼紙':w==='m'?'':esc(COLNAME(w))+'色')+'　'+L.length+' / '+RCAP()+' 箱 <button class="donebtn" data-compact="'+esc(laneOnly(L[0].date,L[0].it.size,L[0].it.loc))+'|'+r+'" style="margin-left:6px">⟳ 重新排號</button></summary><ul class="list">'+
             L.map(x=>'<li class="slip'+(findHi===x.it.id?' foundli':'')+'" style="--c:'+sizeColor(x.it.size)+'" data-date="'+x.date+'" data-id="'+x.it.id+'"><div><div class="code"><span class="badge" style="--c:var(--ink)">'+(x.it.idx||'?')+'</span> '+esc(fmtCode(x.it.code))+'</div><div class="meta">出貨 '+md(x.date)+(x.date===TODAY?' <b style="color:var(--stamp)">今天</b>':'')+'　<span class="badge" style="--c:'+sizeColor(x.it.size)+'">'+esc(sizeLbl(x.it.size))+'</span>'+(x.it.order?'　<i class="dot" style="background:rgb('+colors[wdOf(x.it.order)].rgb.join(',')+')"></i>'+esc(COLNAME(wdOf(x.it.order)))+'（週'+WD[wdOf(x.it.order)]+'注文）':'　無貼紙')+'<br>第 <input type="number" min="1" data-act="row" value="'+(x.it.row||'')+'" style="width:3em;padding:2px 4px;border:1px solid var(--line);border-radius:6px;font-size:14px"> 列 第 <input type="number" min="1" data-act="idx" value="'+(x.it.idx||'')+'" style="width:3em;padding:2px 4px;border:1px solid var(--line);border-radius:6px;font-size:14px"> 個</div></div><div style="display:flex;flex-direction:column;gap:4px"><button class="donebtn" data-act="done">拿走／出貨</button><span style="display:flex;gap:4px"><button class="donebtn" data-act="up" aria-label="往前" style="flex:1">▲</button><button class="donebtn" data-act="down" aria-label="往後" style="flex:1">▼</button></span><button class="donebtn" data-act="loc" style="border-color:var(--carbon);color:var(--carbon)">移位置</button></div></li>').join('')+'</ul></details>';
         });
         $('mapCell').innerHTML=out; return;
@@ -1598,15 +1857,15 @@ body.camOn{overflow:hidden}
     LIX=null; assignMissingPos(); render(); return n;
   }
   $('mapEditBtn').onclick=()=>{
-    const before=mapEdit?JSON.stringify([byColor(),dynColor(),CAP(),MAXR(),layout.subs,layout.resv||'']):null;
+    const before=mapEdit?JSON.stringify([byColor(),dynColor(),CAP(),STK(),MAXR(),layout.subs,layout.resv||'']):null;
     if(mapEdit){
       document.querySelectorAll('[data-lay]').forEach(t=>{ const [r,c]=t.dataset.lay.split('-').map(Number);
         layout.rows[r][c]=t.value.split(/[\s,，、]+/).map(x=>x.trim()).filter(Boolean).map(x=>{ const m=x.match(/(\d{1,2})[\/月.\-](\d{1,2})/); return m?pad(+m[1])+'-'+pad(+m[2]):null; }).filter(Boolean); });
       const subs=[]; document.querySelectorAll('[data-subn]').forEach(t=>{ const i=t.dataset.subn, n=t.value.trim(); const ss=(document.querySelector('[data-subs="'+i+'"]')||{}).value||'';
         if(n) subs.push({n, s:ss.split(/[\s,，、]+/).map(x=>x.trim()).filter(Boolean)}); });
-      layout.subs=subs; if($('subDir')) layout.subDir=$('subDir').value; if($('posFrom')) layout.posFrom=$('posFrom').value; if($('capIn')) layout.cap=Math.max(1,parseInt($('capIn').value)||15); if($('mrIn')) layout.maxRows=Math.max(0,parseInt($('mrIn').value)||0); if($('cmpIn')) layout.compact=$('cmpIn').value==='1'; if($('bcIn')){ const v=$('bcIn').value; layout.byColor=v!=='0'; layout.cmode = v==='1'?'fix':'dyn'; } if(document.querySelector('[data-resv]')) layout.resv=WD_ORDER.map(w=>Math.max(1,parseInt((document.querySelector('[data-resv="'+w+'"]')||{}).value)||1)).join(',');
+      layout.subs=subs; if($('subDir')) layout.subDir=$('subDir').value; if($('posFrom')) layout.posFrom=$('posFrom').value; if($('capIn')) layout.cap=Math.max(1,parseInt($('capIn').value)||15); if($('stkIn')) layout.stk=Math.max(1,parseInt($('stkIn').value)||1); if($('mrIn')) layout.maxRows=Math.max(0,parseInt($('mrIn').value)||0); if($('cmpIn')) layout.compact=$('cmpIn').value==='1'; if($('bcIn')){ const v=$('bcIn').value; layout.byColor=v!=='0'; layout.cmode = v==='1'?'fix':'dyn'; } if(document.querySelector('[data-resv]')) layout.resv=WD_ORDER.map(w=>Math.max(1,parseInt((document.querySelector('[data-resv="'+w+'"]')||{}).value)||1)).join(',');
       saveLayout(); say('位置配置已儲存','ok'); render();
-      if(before!==JSON.stringify([byColor(),dynColor(),CAP(),MAXR(),layout.subs,layout.resv||''])){
+      if(before!==JSON.stringify([byColor(),dynColor(),CAP(),STK(),MAXR(),layout.subs,layout.resv||''])){
         const n=stockItems().length;
         if(n && confirm('排列規則改了。\n要把目前在庫的 '+n+' 箱照新規則重新排位置嗎？\n（現場的貨也要照新位置擺）')){ replaceAll(); say('已依新規則重新排好 '+n+' 箱','ok'); }
       }
@@ -1757,6 +2016,8 @@ body.camOn{overflow:hidden}
   $('month').onchange=e=>{ if(e.target.value){ month=e.target.value; cellSel=null; renderMonth(); } };
   $('tabDay').onclick=()=>showTab('day');
   $('tabMap').onclick=()=>{ showTab('map'); renderMap(); };
+  $('v3d').onclick=()=>setView(true); $('v2d').onclick=()=>setView(false);
+  $('v3d').setAttribute('aria-pressed',view3d); $('v2d').setAttribute('aria-pressed',!view3d);
   $('tabMonth').onclick=()=>{ showTab('month'); renderMonth(); };
   $('tabFind').onclick=()=>{ showTab('find'); renderFind(); $('q').focus(); };
   $('q').oninput=renderFind;
