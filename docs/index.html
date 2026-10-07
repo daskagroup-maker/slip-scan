@@ -1009,7 +1009,7 @@ body.camOn{overflow:hidden}
   const saveSR=()=>{ try{ localStorage.setItem('slipStickyRow',stickyRow); localStorage.setItem('slipStickyG',stickyG); }catch(_){} };
   function locShort(loc){ return loc ? placeLabel(placeOf(TODAY,'',loc)) : ''; }
   function openRowPick(){
-    const lane=placeOf(TODAY,'',stickyLoc).key, L=lix().get(lane), stk=STK(), G=CAP(), cnt={};
+    const has=/^\d+-\d+-/.test(stickyLoc), L=has?lix().get(placeOf(TODAY,'',stickyLoc).key):null, stk=STK(), G=CAP(), cnt={};
     let maxR=0; if(L) L.forEach((R,row)=>R.ids.forEach(idx=>{ const k=row+'-'+gOf(idx); cnt[k]=(cnt[k]||0)+1; maxR=Math.max(maxR,row); }));
     const NR=Math.max(MAXR()&&MAXR()<=8?MAXR():1, maxR+ (maxR>=(MAXR()||1)?1:0));
     let h='<div class="rpcols">';
@@ -1017,7 +1017,7 @@ body.camOn{overflow:hidden}
       for(let g=1;g<=G;g++){ const n=cnt[r+'-'+g]||0, on=stickyRow===r&&stickyG===g;
         h+='<button data-rp="'+r+'-'+g+'" class="'+(n>=stk?'full':n?'some':'')+(on?' on':'')+'"><b>第 '+g+' 格</b><small>'+(n?n+'/'+stk+'箱':'空')+'</small></button>'; }
       h+='</div>'; }
-    $('rpTitle').textContent=locShort(stickyLoc)+'：放第幾列、第幾格？'; $('rpGrid').innerHTML=h+'</div><p class="meta">放滿了會自動接下一格。</p>'; $('rpick').hidden=false;
+    $('rpTitle').textContent=(has?locShort(stickyLoc)+'：':'')+'放第幾列、第幾格？'; $('rpGrid').innerHTML=h+'</div><p class="meta">放滿了會自動接下一格。</p>'; $('rpick').hidden=false;
   }
   function renderSticky(){
     const t = stickyLoc ? '📍 現在全部放：<b>'+esc(locShort(stickyLoc))+'</b>' : '📍 放置位置：自動（依出貨日）';
@@ -1052,7 +1052,7 @@ body.camOn{overflow:hidden}
   document.addEventListener('click',e=>{
     const sr=e.target.closest('[data-srow]'); if(sr){
       if(sr.dataset.srow==='clear'){ stickyRow=0; stickyG=0; }
-      else if(pileMode() && /^\d+-\d+-/.test(stickyLoc)){ openRowPick(); return; }   // 先選了位置 → 直接點要哪一列、哪一格
+      else if(pileMode()){ openRowPick(); return; }   // 先選了位置 → 直接點要哪一列、哪一格
       else { const v=prompt('之後掃的貨，要從第幾列開始放？\n（這一列放滿了會自動接下一列）\n要指定到「第幾格」，請先按上面「指定位置」選好位置', stickyRow||''); if(v===null) return; stickyRow=Math.max(0,parseInt(v)||0); stickyG=0; }
       saveSR(); renderSticky(); if(pending) renderSheet(); if(camOn()) setStage(stage); return; }
     const rp=e.target.closest('[data-rp]'); if(rp){ const [r,g]=rp.dataset.rp.split('-').map(Number); stickyRow=r; stickyG=g; saveSR(); $('rpick').hidden=true; renderSticky(); if(pending) renderSheet(); if(camOn()) setStage(stage); say('之後掃的放：第 '+r+' 列・第 '+g+' 格','ok'); return; }
