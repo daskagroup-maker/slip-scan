@@ -85,6 +85,9 @@ input[type=date],input[type=month]{flex:1;min-width:0;padding:8px 10px;border:1p
 .scanbtn.look{background:var(--ink);color:var(--paper)}
 .scanbtn svg{width:26px;height:26px}
 .alt{display:flex;gap:8px;margin-top:8px}
+form.manual.big{margin:14px 0 10px}
+form.manual.big input{font-size:24px;padding:16px 14px;letter-spacing:1px}
+form.manual.big button{font-size:20px;padding:0 22px}
 .alt button{flex:1;padding:11px;border:1px solid var(--line);border-radius:10px;background:var(--card);font-size:15px}
 .manual{display:flex;gap:8px;margin-top:8px}
 .manual input{flex:1;min-width:0;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);font-variant-numeric:tabular-nums}
@@ -537,7 +540,7 @@ body.camOn{overflow:hidden}
 
   <div class="mode" role="group" aria-label="模式">
     <button id="mAdd" aria-pressed="true">登記傳票</button>
-    <button id="mLook" aria-pressed="false">揀貨・查詢</button>
+    <button id="mLook" aria-pressed="false">🔍 查詢</button>
   </div>
 
   <div id="pickPanel" hidden>
@@ -636,8 +639,8 @@ body.camOn{overflow:hidden}
   <div class="msg" id="msg" role="status" aria-live="polite"></div>
 
   <div class="tabs" role="tablist">
-    <button role="tab" id="tabDay" aria-selected="true">當日</button>
-    <button role="tab" id="tabFind" aria-selected="false">🔍 找貨</button>
+    <button role="tab" id="tabDay" aria-selected="false" style="display:none">當日</button>
+    <button role="tab" id="tabFind" aria-selected="false" style="display:none">🔍 找貨</button>
     <button role="tab" id="tabMap" aria-selected="false">📍 地圖</button>
     <button role="tab" id="tabMonth" aria-selected="false">月總覽</button>
   </div>
@@ -1208,6 +1211,14 @@ body.camOn{overflow:hidden}
   let wrongAt=0;
   function onCode(raw, manual){
     let code=normCode(raw); if(!code) return;
+    if(appMode==='look' && manual && code.length<12){   // 查詢：輸入後幾碼也找得到
+      const q=code.toLowerCase(), M=[]; for(const d in days) days[d].items.forEach(i=>{ if(!gone(d,i) && i.code.toLowerCase().endsWith(q)) M.push(i.code); });
+      const U=[...new Set(M)];
+      if(U.length===1) code=U[0];
+      else if(U.length>1){ say('有 '+U.length+' 張的後幾碼一樣，請多輸入幾碼：'+U.slice(0,5).map(fmtCode).join('、'),'warn'); return; }
+      else { say('找不到「'+raw+'」','warn'); return; }
+      showLookup(code); return;
+    }
     if($('onlyTrack').checked && !isTrack(code)){
       if(manual){ say('「'+raw+'」不是 12 碼追蹤號碼，已照輸入登記','warn'); }
       else { const n=Date.now(); if(n-wrongAt>2500){ wrongAt=n; $('camSub').innerHTML='<span style="color:#ffb4a8">讀到其他條碼，請對準「お問合せNo」上方的條碼</span>'; setTimeout(()=>{ if(stage==='scan') setStage('scan'); },2500); } return; }
@@ -1233,7 +1244,7 @@ body.camOn{overflow:hidden}
     const cnt={}; for(const d in days) days[d].items.forEach(i=>{ if(!i.done) cnt[d]=(cnt[d]||0)+1; });
     const ds=[...new Set([TODAY, ...periodDates(), ...Object.keys(cnt)])].sort();
     $('pickDate').innerHTML='<option value=""'+(pickDay===''?' selected':'')+'>📍 只找位置（不揀貨）</option>'+ds.map(d=>'<option value="'+d+'"'+(d===pickDay?' selected':'')+'>'+md(d)+(d===TODAY?' 今天':'')+'　剩 '+(cnt[d]||0)+' 箱</option>').join('');
-    if(!pickDay){ $('pickProg').innerHTML='<span style="font-size:15px">掃傳票就顯示貨放在哪裡</span>'; $('pickLeft').innerHTML=''; return; }
+    if(!pickDay){ $('pickProg').innerHTML='<span style="font-size:15px">輸入追蹤號碼就顯示貨放在哪裡</span>'; $('pickLeft').innerHTML=''; return; }
     const L=(days[pickDay]&&days[pickDay].items)||[], done=L.filter(i=>i.done).length;
     $('pickProg').innerHTML = L.length ? md(pickDay)+' 已揀 '+done+' / '+L.length+' 箱<div class="bar"><i style="width:'+(done/L.length*100)+'%"></i></div>' : md(pickDay)+' 沒有要出的貨';
     const g={}; L.filter(i=>!i.done).forEach(i=>{ const P0=placeOf(pickDay,i.size,i.loc); const k=placeLabel(P0)+(P0&&P0.free==null?'・'+colLbl(i.order):'')+'｜'+sizeLbl(i.size); g[k]=(g[k]||0)+1; });
@@ -2025,15 +2036,21 @@ body.camOn{overflow:hidden}
   function shift(n){ const d=parse(current); d.setDate(d.getDate()+n); go(ymd(d)); }
   function shiftMonth(n){ const [y,m]=month.split('-').map(Number); const d=new Date(y,m-1+n,1); month=d.getFullYear()+'-'+pad(d.getMonth()+1); cellSel=null; renderMonth(); }
   function showTab(t){
+    if(t==='day'||t==='find') t='map';   // 只留地圖和月總覽
     [['day','tabDay','viewDay'],['map','tabMap','viewMap'],['month','tabMonth','viewMonth'],['find','tabFind','viewFind']].forEach(([k,tb,v])=>{
       $(tb).setAttribute('aria-selected',t===k); $(v).hidden=t!==k; });
   }
   function setMode(m){
     appMode=m; setTimeout(renderBatchDates,0);
     $('mAdd').setAttribute('aria-pressed',m==='add'); $('mLook').setAttribute('aria-pressed',m==='look');
-    $('addPanel').hidden = m!=='add'; $('pickPanel').hidden = m!=='look'; if(m==='look') renderPick();
+    $('addPanel').hidden = m!=='add'; $('pickPanel').hidden = true; if(m==='look') pickDay='';   // 查詢：只找位置，不用選揀貨日期
+    { const f=document.querySelector('form.manual'); if(m==='look'){ $('lookup').before(f); f.classList.add('big'); setTimeout(()=>$('manual').focus(),50); } else { $('msg').before(f); f.classList.remove('big'); } }
     $('scan').classList.toggle('look',m==='look');
     $('scanLbl').textContent = m==='add' ? '用相機掃描' : '開始揀貨（掃箱子上的傳票）';
+    // 查詢：只用手動輸入（不開相機）
+    $('scan').style.display = m==='look' ? 'none' : ''; document.querySelector('.alt').style.display = m==='look' ? 'none' : '';
+    $('manual').placeholder = m==='look' ? '🔍 追蹤號碼（後4碼也可）' : '手動輸入或接掃描槍';
+    $('manual').setAttribute('inputmode', m==='look' ? 'numeric' : 'text');
     $('lookup').classList.remove('on'); say('');
     if(m==='look') showTab('map');
   }
@@ -2047,7 +2064,7 @@ body.camOn{overflow:hidden}
   $('date').onchange=e=>{ if(e.target.value) go(e.target.value); };
   $('mPrev').onclick=()=>shiftMonth(-1); $('mNext').onclick=()=>shiftMonth(1);
   $('month').onchange=e=>{ if(e.target.value){ month=e.target.value; cellSel=null; renderMonth(); } };
-  $('tabDay').onclick=()=>showTab('day');
+  $('tabDay').onclick=()=>showTab('day'); setTimeout(()=>showTab('map'),0);
   $('tabMap').onclick=()=>{ showTab('map'); renderMap(); };
   $('v3d').onclick=()=>setView(true); $('v2d').onclick=()=>setView(false);
   $('v3d').setAttribute('aria-pressed',view3d); $('v2d').setAttribute('aria-pressed',!view3d);
