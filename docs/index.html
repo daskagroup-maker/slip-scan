@@ -171,6 +171,9 @@ input[type=date],input[type=month]{flex:1;min-width:0;padding:8px 10px;border:1p
 .slot.sel{outline:3px solid var(--ink);outline-offset:1px}
 .whedit{display:flex;flex-direction:column;gap:6px}
 .ledit{display:flex;align-items:center;gap:8px;font-size:16px}
+.ledit .resv{display:flex;flex-wrap:wrap;gap:4px;flex:1 1 100%;width:auto;color:inherit}
+.resv label{display:flex;align-items:center;gap:2px;border-radius:8px;padding:2px 4px;color:#222;font-weight:900;font-size:14px}
+.resv input{width:2.6em;padding:4px;border:1px solid rgba(0,0,0,.2);border-radius:6px;font-size:15px}
 .ledit span{width:5.5em;flex:none;color:var(--ink2)}
 .ledit input{flex:1;min-width:0;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);font-size:17px;color:var(--ink)}
 .slot.edit textarea{width:100%;font-size:13px;border:1px solid var(--line);border-radius:6px;padding:2px;text-align:center;background:var(--card);color:var(--ink);resize:none}
@@ -1281,9 +1284,9 @@ body.camOn{overflow:hidden}
   // 一次性：改成「一開始就分顏色」，在庫的貨照新規則重排
   let bcMigrated=false;
   function migrateBC(){
-    if(layout.bcv || bcMigrated) return; bcMigrated=true;
-    layout.byColor=true; layout.bcv=1;
-    setTimeout(()=>{ saveLayout(); const n=replaceAll(); if(n) say('已改成依貼紙顏色分列，在庫 '+n+' 箱已重新排位置','ok'); }, 800);
+    if((+layout.bcv||0)>=2 || bcMigrated) return; bcMigrated=true;
+    layout.byColor=true; layout.cmode='dyn'; layout.bcv=2;
+    setTimeout(()=>{ saveLayout(); const n=replaceAll(); if(n) say('已改成「分顏色・依現場」，在庫 '+n+' 箱已重新排位置','ok'); }, 800);
   }
   let slotCache=new Map(), slotLayout=null;
   function slotOf(date){
@@ -1315,7 +1318,13 @@ body.camOn{overflow:hidden}
   const spotTxt=sp=>sp&&sp.row?'・第 '+sp.row+' 列・第 '+sp.idx+' 個':'';
   function locText(date,size,loc,sp,order){ if(sp && sp.ovf!==undefined) loc=sp.ovf; const P=placeOf(date,size,loc); return placeLabel(P)+(P?spotTxt(sp):'')+'（'+(P&&P.free==null?colLbl(order)+'・':'')+sizeLbl(size)+'）'+(P&&P.manual?' ✋':'')+(P&&P.ovf?'（原本那排滿了）':''); }
   const laneOnly=(date,size,loc)=>{ const P=placeOf(date,size,loc); return P?P.key:'none'; };
-  const byColor=()=>layout.byColor!==false;   // 預設：一開始就分顏色（日＝第1列…土＝第7列）   // 預設：照順序放，不依顏色分列
+  const byColor=()=>layout.byColor!==false;
+  const dynColor=()=>byColor() && layout.cmode!=='fix';   // 依現場：沒有固定列，新顏色開新列，多的接在同顏色旁邊
+  // 每個顏色預留幾列（例如白色比較多就留 2 列）：白 1-2、黃 3、藍 4…
+  const RESV=w=>{ const a=String(layout.resv||'').split(','); const n=parseInt(a[WD_ORDER.indexOf(w)]); return n>0?n:1; };
+  function colorRows(w){ let st=1; for(const x of WD_ORDER){ if(x===w) break; st+=RESV(x); } const out=[]; for(let i=0;i<RESV(w);i++) out.push(st+i); return out; }
+  const RESV_TOTAL=()=>WD_ORDER.reduce((a,w)=>a+RESV(w),0);
+  function colorOfRow(r){ for(const w of WD_ORDER) if(colorRows(w).includes(r)) return w; return null; }   // 預設：一開始就分顏色（日＝第1列…土＝第7列）   // 預設：照順序放，不依顏色分列
   const laneKey=(date,size,loc,order)=>laneOnly(date,size,loc)+'|'+(byColor()?wdOf(order):'');
   /* 位置索引（大量件數也快）：lane → row → {w, ids:Map(id→idx)}；每次畫面更新時重建一次 */
   let LIX=null, LPOS=null;
@@ -1344,9 +1353,15 @@ body.camOn{overflow:hidden}
       const mine=Object.keys(rows).map(Number).filter(r=>(!byColor() || rows[r].w===w) && (!limit || r<=limit)).sort((a,b)=>a-b);
       for(const r of mine){ for(let i=1;i<=cap;i++) if(!rows[r].idx.has(i)) return {row:r, idx:i}; }
       let r=1;
-      if(byColor()){   // 分顏色：每個顏色先用自己固定的列（日＝第1列、月＝第2列…土＝第7列），滿了再往第8列之後開
-        const pref = w==='x' ? 8 : WD_ORDER.indexOf(w)+1;
-        if(!rows[pref]) r=pref; else { r=8; while(rows[r]) r++; }
+      if(dynColor()){
+        if(w!=='x'){ const mineAll=Object.keys(rows).map(Number).filter(x=>rows[x].w===w).sort((a,b)=>a-b);
+          if(mineAll.length){ const nx=mineAll[mineAll.length-1]+1;            // 同顏色滿了 → 接在它旁邊（下一列）
+            if(limit && nx>limit) return null;
+            return rows[nx] ? {row:nx, idx:1, shift:{lane, from:nx}} : {row:nx, idx:1}; } }
+        while(rows[r]) r++;                                                   // 新顏色 → 第一個空列
+      } else if(byColor()){   // 分顏色：每個顏色先用自己固定的列（日＝第1列、月＝第2列…土＝第7列），滿了再往第8列之後開
+        const mineRes = w==='x' ? [] : colorRows(w).filter(x=>!rows[x]);
+        if(mineRes.length) r=mineRes[0]; else { r=RESV_TOTAL()+1; while(rows[r]) r++; }
       } else { while(rows[r]) r++; }
       return (limit && r>limit) ? null : {row:r, idx:1};
     };
@@ -1378,7 +1393,11 @@ body.camOn{overflow:hidden}
     if(!other) return;
     other[1].idx=it.idx; it.idx+=dir; putItem(other[0],other[1]); putItem(date,it); render();
   }
-  function placeItem(date,it){ const sp=allocSpot(date,it.size,it.loc,it.order,it.id); if(sp.ovf!==undefined){ it.loc=sp.ovf; it.oh=sp.ovf?sp.home:''; } it.row=sp.row; it.idx=sp.idx; if(sp.full && !bulk) say('⚠ 這一格的排都滿了（每排 '+MAXR()+' 列），請考慮放到臨時區','warn'); if(LIX){ lixDel(it.id); if(!gone(date,it)) lixAdd(laneOnly(date,it.size,it.loc), it); } }
+  function shiftRows(sh, exceptId){   // 插入一列：後面的列號全部 +1
+    const L=[]; for(const d in days) for(const x of days[d].items) if(x.id!==exceptId && !gone(d,x) && x.row>=sh.from && laneOnly(d,x.size,x.loc)===sh.lane) L.push([d,x]);
+    withBulk(()=>L.forEach(([d,x])=>{ x.row++; putItem(d,x); })); LIX=null; return L.length;
+  }
+  function placeItem(date,it){ const sp=allocSpot(date,it.size,it.loc,it.order,it.id); if(sp.shift){ const n=shiftRows(sp.shift,it.id); if(n && !bulk) say('同顏色放滿了，接在旁邊開新的一列（後面 '+n+' 箱的列號 +1）','ok'); } if(sp.ovf!==undefined){ it.loc=sp.ovf; it.oh=sp.ovf?sp.home:''; } it.row=sp.row; it.idx=sp.idx; if(sp.full && !bulk) say('⚠ 這一格的排都滿了（每排 '+MAXR()+' 列），請考慮放到臨時區','warn'); if(LIX){ lixDel(it.id); if(!gone(date,it)) lixAdd(laneOnly(date,it.size,it.loc), it); } }
   let numbering=false;
   function assignMissingPos(){
     if(numbering) return 0; numbering=true; LIX=null;
@@ -1391,7 +1410,7 @@ body.camOn{overflow:hidden}
   function saveLayout(){
     slotCache.clear(); LIX=null;
     try{ localStorage.setItem('slipLayout', JSON.stringify(layout)); }catch(_){}
-    if(mode==='db' && rtdb) rtdb.ref(ROOT+'/layout').set({names:layout.names||[], rows:layout.rows.map(row=>row.map(k=>(k||[]).join(',')||'-')), subs:(layout.subs||[]).map(x=>x.n+':'+(x.s||[]).join(',')), subDir:layout.subDir||'v', posFrom:layout.posFrom||'in', cap:CAP(), compact:autoCompact(), byColor:byColor(), maxRows:MAXR(), bcv:1}).catch(()=>{});   // 雲端存字串，空格存 '-'
+    if(mode==='db' && rtdb) rtdb.ref(ROOT+'/layout').set({names:layout.names||[], rows:layout.rows.map(row=>row.map(k=>(k||[]).join(',')||'-')), subs:(layout.subs||[]).map(x=>x.n+':'+(x.s||[]).join(',')), subDir:layout.subDir||'v', posFrom:layout.posFrom||'in', cap:CAP(), compact:autoCompact(), byColor:byColor(), maxRows:MAXR(), bcv:2, resv:layout.resv||'', cmode:layout.cmode||'dyn'}).catch(()=>{});   // 雲端存字串，空格存 '-'
   }
   let mapFilter='all', mapSel=null;
   const autoExp=()=>!$('autoExp') || $('autoExp').checked;
@@ -1466,7 +1485,8 @@ body.camOn{overflow:hidden}
         '<label class="ledit"><span>小格排列</span><select id="subDir" style="flex:1;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--card);font-size:16px;color:var(--ink)"><option value="v"'+(layout.subDir!=='h'?' selected':'')+'>直的（左右並排）</option><option value="h"'+(layout.subDir==='h'?' selected':'')+'>橫的（上下疊）</option></select></label>'+
         '<label class="ledit"><span>每排最多</span><input id="mrIn" type="number" min="0" value="'+MAXR()+'" style="flex:0 0 5em"><span style="width:auto">列（滿了放隔壁排，0＝不限）</span></label>'+
         '<label class="ledit"><span>每列可放</span><input id="capIn" type="number" min="1" value="'+CAP()+'" style="flex:0 0 5em"><span style="width:auto">個</span></label>'+
-        '<label class="ledit"><span>放的順序</span><select id="bcIn" style="flex:1;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--card);font-size:16px;color:var(--ink)"><option value="0"'+(!byColor()?' selected':'')+'>照順序放（第 1 列滿了放第 2 列）</option><option value="1"'+(byColor()?' selected':'')+'>每個貼紙顏色從新的一列開始</option></select></label>'+
+        '<label class="ledit"><span>放的順序</span><select id="bcIn" style="flex:1;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--card);font-size:16px;color:var(--ink)"><option value="d"'+(dynColor()?' selected':'')+'>分顏色・依現場（多的接在同顏色旁邊）</option><option value="1"'+(byColor()&&!dynColor()?' selected':'')+'>分顏色・固定列（白第1列、黃第2列…）</option><option value="0"'+(!byColor()?' selected':'')+'>不分顏色・照順序放</option></select></label>'+
+        '<div class="ledit" style="flex-wrap:wrap"><span>每色預留</span><span class="resv">'+WD_ORDER.map(w=>'<label style="background:rgb('+colors[w].rgb.join(',')+')">'+esc(COLNAME(w))+'<input data-resv="'+w+'" type="number" min="1" value="'+RESV(w)+'"></label>').join('')+'</span><span class="meta" style="width:100%">列（只有「固定列」才用。例如白色比較多，白填 2，白就用第 1～2 列）</span></div>'+
         '<label class="ledit"><span>拿走後</span><select id="cmpIn" style="flex:1;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--card);font-size:16px;color:var(--ink)"><option value="1"'+(autoCompact()?' selected':'')+'>後面的往前補（自動重新排號）</option><option value="0"'+(!autoCompact()?' selected':'')+'>留空位，下次放進來補</option></select></label>'+
         '<label class="ledit"><span>第 1 列在</span><select id="posFrom" style="flex:1;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--card);font-size:16px;color:var(--ink)"><option value="in"'+(layout.posFrom!=='aisle'?' selected':'')+'>最上面</option><option value="aisle"'+(layout.posFrom==='aisle'?' selected':'')+'>最下面</option></select></label>'+
         '<label class="ledit"><input data-subn="'+S.length+'" value="" style="flex:0 0 4.5em" placeholder="＋新增"><input data-subs="'+S.length+'" value="" placeholder="尺寸"></label></div>'+
@@ -1512,14 +1532,14 @@ body.camOn{overflow:hidden}
         const byR={}; M.forEach(x=>{ (byR[x.it.row||0]=byR[x.it.row||0]||{})[x.it.idx||0]=x; });
         let rowsN=Object.keys(byR).map(Number).filter(Boolean);
         let maxR=rowsN.length?Math.max(...rowsN):0;
-        if(byColor()) maxR=Math.max(maxR,7); else maxR=Math.max(maxR+ (M.length?0:1), 1);
+        if(byColor() && !dynColor()) maxR=Math.max(maxR,RESV_TOTAL()); else maxR=Math.max(maxR+ (M.length?0:1), 1);
         const loc=S.map((x,j)=>'<i class="'+(j===i?'on':'')+'"></i>').join('');
         out+='<div class="inblk'+(si===i?' insel':'')+'" '+(si===i?'id="inSel"':'')+'><div class="inbh"><span class="locmini">'+loc+'</span><b>'+esc(sub.n||'')+'</b>　'+esc((sub.s||[]).length>2?sub.s[0]+'〜':(sub.s||[]).join('・'))+'<span class="meta" style="margin-left:auto">'+M.length+' 箱</span></div>';
         const order=[]; for(let r=1;r<=Math.min(maxR,80);r++) order.push(r); if(!up) order.reverse();
         out+='<div class="ingrid" style="--cap:'+cap+'">';
         order.forEach(r=>{
           const R=byR[r]||{}, items=Object.values(R);
-          const fixedW = byColor() && r<=7 ? WD_ORDER[r-1] : null;
+          const fixedW = byColor() && !dynColor() ? colorOfRow(r) : null;
           const ws=[...new Set(items.map(x=>wdOf(x.it.order)))], w = fixedW!=null?fixedW : (ws.length===1?ws[0]:null);
           const lab = w==null ? '' : (w==='x'?'無':esc(COLNAME(w)));
           const lbg = w==null||w==='x' ? 'var(--line)' : 'rgb('+colors[w].rgb.join(',')+')';
@@ -1578,15 +1598,15 @@ body.camOn{overflow:hidden}
     LIX=null; assignMissingPos(); render(); return n;
   }
   $('mapEditBtn').onclick=()=>{
-    const before=mapEdit?JSON.stringify([byColor(),CAP(),MAXR(),layout.subs]):null;
+    const before=mapEdit?JSON.stringify([byColor(),dynColor(),CAP(),MAXR(),layout.subs,layout.resv||'']):null;
     if(mapEdit){
       document.querySelectorAll('[data-lay]').forEach(t=>{ const [r,c]=t.dataset.lay.split('-').map(Number);
         layout.rows[r][c]=t.value.split(/[\s,，、]+/).map(x=>x.trim()).filter(Boolean).map(x=>{ const m=x.match(/(\d{1,2})[\/月.\-](\d{1,2})/); return m?pad(+m[1])+'-'+pad(+m[2]):null; }).filter(Boolean); });
       const subs=[]; document.querySelectorAll('[data-subn]').forEach(t=>{ const i=t.dataset.subn, n=t.value.trim(); const ss=(document.querySelector('[data-subs="'+i+'"]')||{}).value||'';
         if(n) subs.push({n, s:ss.split(/[\s,，、]+/).map(x=>x.trim()).filter(Boolean)}); });
-      layout.subs=subs; if($('subDir')) layout.subDir=$('subDir').value; if($('posFrom')) layout.posFrom=$('posFrom').value; if($('capIn')) layout.cap=Math.max(1,parseInt($('capIn').value)||15); if($('mrIn')) layout.maxRows=Math.max(0,parseInt($('mrIn').value)||0); if($('cmpIn')) layout.compact=$('cmpIn').value==='1'; if($('bcIn')) layout.byColor=$('bcIn').value==='1';
+      layout.subs=subs; if($('subDir')) layout.subDir=$('subDir').value; if($('posFrom')) layout.posFrom=$('posFrom').value; if($('capIn')) layout.cap=Math.max(1,parseInt($('capIn').value)||15); if($('mrIn')) layout.maxRows=Math.max(0,parseInt($('mrIn').value)||0); if($('cmpIn')) layout.compact=$('cmpIn').value==='1'; if($('bcIn')){ const v=$('bcIn').value; layout.byColor=v!=='0'; layout.cmode = v==='1'?'fix':'dyn'; } if(document.querySelector('[data-resv]')) layout.resv=WD_ORDER.map(w=>Math.max(1,parseInt((document.querySelector('[data-resv="'+w+'"]')||{}).value)||1)).join(',');
       saveLayout(); say('位置配置已儲存','ok'); render();
-      if(before!==JSON.stringify([byColor(),CAP(),MAXR(),layout.subs])){
+      if(before!==JSON.stringify([byColor(),dynColor(),CAP(),MAXR(),layout.subs,layout.resv||''])){
         const n=stockItems().length;
         if(n && confirm('排列規則改了。\n要把目前在庫的 '+n+' 箱照新規則重新排位置嗎？\n（現場的貨也要照新位置擺）')){ replaceAll(); say('已依新規則重新排好 '+n+' 箱','ok'); }
       }
