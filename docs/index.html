@@ -85,6 +85,10 @@ input[type=date],input[type=month]{flex:1;min-width:0;padding:8px 10px;border:1p
 .scanbtn.look{background:var(--ink);color:var(--paper)}
 .scanbtn svg{width:26px;height:26px}
 .alt{display:flex;gap:8px;margin-top:8px}
+.lprow button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;line-height:1.1;padding:6px 0 !important;min-height:56px}
+.lprow button b{font-size:13px;opacity:.6}
+.lprow button small{font-size:15px;font-weight:900}
+.lprow button small.e{opacity:.35}
 form.manual.big{margin:14px 0 10px}
 form.manual.big input{font-size:24px;padding:16px 14px;letter-spacing:1px}
 form.manual.big button{font-size:20px;padding:0 22px}
@@ -1010,7 +1014,7 @@ body.camOn{overflow:hidden}
     let h='';
     layout.rows.forEach((row,r)=>{
       h+='<div class="meta">'+esc((layout.names&&layout.names[r])||('第'+(r+1)+'排'))+'</div><div class="lprow" style="grid-template-columns:repeat('+row.length+',1fr)">'+
-        row.map((k,c)=>'<button data-lps="'+r+'-'+c+'" aria-pressed="'+(lpRow===r+'-'+c || (!lpRow && m && +m[1]===r && +m[2]===c))+'">'+(c+1)+'</button>').join('')+'</div>';
+        row.map((k,c)=>'<button data-lps="'+r+'-'+c+'" aria-pressed="'+(lpRow===r+'-'+c || (!lpRow && m && +m[1]===r && +m[2]===c))+'"><b>'+(c+1)+'</b>'+((k||[]).length?(k||[]).map(x=>'<small>'+mdk(x)+'</small>').join(''):'<small class="e">—</small>')+'</button>').join('')+'</div>';
     });
     if(lpRow){ const [r,c]=lpRow.split('-').map(Number);
       h+='<div class="meta">'+esc(slotName({r,c}))+' 的哪一格？</div><div class="lpsubs">'+((layout.subs||[]).length?(layout.subs.map((x,i)=>'<button data-lp="'+lpRow+'-'+i+'">'+esc(x.n)+'</button>').join('')):'<button data-lp="'+lpRow+'--1">整格</button>')+'</div>'; }
