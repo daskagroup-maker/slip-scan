@@ -251,6 +251,7 @@ input[type=date],input[type=month]{flex:1;min-width:0;padding:8px 10px;border:1p
 .l3{cursor:pointer}
 .lane3d{display:block;width:100%;height:auto;font-family:inherit}
 .c3{cursor:pointer}
+.c3.hit polygon{fill:rgba(0,0,0,0);stroke:none}
 .c3.f polygon{animation:f3 1s ease-in-out 5}
 .t4n{font-size:2.2px;font-weight:900;text-anchor:middle;fill:rgba(0,0,0,.6)}
 .t4l{font-size:2.8px;font-weight:900;text-anchor:middle;fill:#222}
@@ -1659,12 +1660,14 @@ body.camOn{overflow:hidden}
         if(!pile.length){ out+='<polygon points="'+pts([P(x0,y,0),P(x0+U,y,0),P(x0+U,y+DY-.6,0),P(x0,y+DY-.6,0)])+'" fill="none" stroke="#c3cad4" stroke-width=".18" stroke-dasharray=".6 .5"/>'; return; }
         pile.forEach((q,li)=>{
         const qw=wdOf(q.it.order), rgb=qw==='x'?[205,211,219]:colors[qw].rgb, d=DY-.6, z0=li*HS, z1=z0+HS;
-        const isT=q.date===TODAY, isF=q.it.id===findHi, isS=q.it.id===cellHi;
+        const isT=q.date===TODAY, isF=q.it.id===findHi, isS=pileMode()?pile.some(z=>z.it.id===cellHi):q.it.id===cellHi;
         const st=isS?'#1d2a44':isF?'#ff9500':isT?'#c8372d':'rgba(0,0,0,.3)', sw=(isS||isF||isT)?.6:.15;
         const top=[P(x0,y,z1),P(x0+U,y,z1),P(x0+U,y+d,z1),P(x0,y+d,z1)], fr=[P(x0,y+d,z0),P(x0+U,y+d,z0),P(x0+U,y+d,z1),P(x0,y+d,z1)], rt=[P(x0+U,y,z0),P(x0+U,y+d,z0),P(x0+U,y+d,z1),P(x0+U,y,z1)];
         out+='<g class="c3'+(isF?' f':'')+'" data-cell="'+q.date+'|'+q.it.id+'"><polygon points="'+pts(rt)+'" fill="'+shade(rgb,.70)+'" stroke="'+st+'" stroke-width="'+sw+'"/><polygon points="'+pts(fr)+'" fill="'+shade(rgb,.86)+'" stroke="'+st+'" stroke-width="'+sw+'"/><polygon points="'+pts(top)+'" fill="'+shade(rgb,1.05)+'" stroke="'+st+'" stroke-width="'+sw+'"/>';
         if(li===pile.length-1){ const tp=P(x0+U/2,y+d/2,z1); out+='<text x="'+tp[0].toFixed(2)+'" y="'+(tp[1]+.7).toFixed(2)+'" class="t4n">'+(STK()>1?pile.length:k)+'</text>'; }
         out+='</g>'; });
+        { const top=pile[pile.length-1], zt=Math.max(pile.length*HS,2), xa=x0-GX/2, xb=x0+U+GX/2, ya=y-.3, yb=y+DY-.3;   // 點的範圍放大：整疊＋周圍
+          out+='<g class="c3 hit" data-cell="'+top.date+'|'+top.it.id+'"><polygon points="'+pts([P(xa,ya,zt),P(xb,ya,zt),P(xb,yb,zt),P(xa,yb,zt)])+'"/><polygon points="'+pts([P(xa,yb,0),P(xb,yb,0),P(xb,yb,zt),P(xa,yb,zt)])+'"/><polygon points="'+pts([P(xb,ya,0),P(xb,yb,0),P(xb,yb,zt),P(xb,ya,zt)])+'"/></g>'; }
       }));
     }
     // 尺寸區名稱（最前面）
@@ -1817,7 +1820,9 @@ body.camOn{overflow:hidden}
       });
       // 點到的那一箱
       if(cellHi){ let hit=null; L.forEach(x=>{ if(x.it.id===cellHi) hit=x; });
-        if(hit){ const x=hit; out+='<ul class="list" id="cellCard"><li class="slip foundli" style="--c:'+sizeColor(x.it.size)+'" data-date="'+x.date+'" data-id="'+x.it.id+'"><div><div class="code">'+esc(fmtCode(x.it.code))+'</div><div class="meta"><b>📍 '+esc(locText(x.date,x.it.size,x.it.loc,x.it,x.it.order))+'</b><br>出貨 '+md(x.date)+(x.date===TODAY?' <b style="color:var(--stamp)">今天</b>':'')+(x.it.note?'　'+esc(x.it.note):'')+'</div></div><div style="display:flex;flex-direction:column;gap:4px"><button class="donebtn" data-act="done">拿走／出貨</button><span style="display:flex;gap:4px"><button class="donebtn" data-act="up" aria-label="往前" style="flex:1">▲</button><button class="donebtn" data-act="down" aria-label="往後" style="flex:1">▼</button></span><button class="donebtn" data-act="loc" style="border-color:var(--carbon);color:var(--carbon)">移位置</button></div></li></ul>'; } }
+        if(hit){ let grp=[hit];
+          if(pileMode()){ const ln=laneOnly(hit.date,hit.it.size,hit.it.loc), g=gOf(hit.it.idx); grp=L.filter(x=>x.it.row===hit.it.row && gOf(x.it.idx)===g && laneOnly(x.date,x.it.size,x.it.loc)===ln).sort((a,b)=>(b.it.idx||0)-(a.it.idx||0)); }
+          out+='<div id="cellCard">'+(grp.length>1?'<p class="dgrp" style="margin:8px 0 4px"><b>第 '+hit.it.row+' 列・第 '+gOf(hit.it.idx)+' 格</b>　這一疊 '+grp.length+' 箱（最上面在前）</p>':'')+'<ul class="list">'+grp.map(x=>'<li class="slip'+(x===hit?' foundli':'')+'" style="--c:'+sizeColor(x.it.size)+'" data-date="'+x.date+'" data-id="'+x.it.id+'"><div><div class="code">'+esc(fmtCode(x.it.code))+'</div><div class="meta"><b>📍 '+esc(locText(x.date,x.it.size,x.it.loc,x.it,x.it.order))+'</b><br>出貨 '+md(x.date)+(x.date===TODAY?' <b style="color:var(--stamp)">今天</b>':'')+(x.it.note?'　'+esc(x.it.note):'')+'</div></div><div style="display:flex;flex-direction:column;gap:4px"><button class="donebtn" data-act="done">拿走／出貨</button><span style="display:flex;gap:4px"><button class="donebtn" data-act="up" aria-label="往前" style="flex:1">▲</button><button class="donebtn" data-act="down" aria-label="往後" style="flex:1">▼</button></span><button class="donebtn" data-act="loc" style="border-color:var(--carbon);color:var(--carbon)">移位置</button></div></li>').join('')+'</ul></div>'; } }
       else out+='<p class="meta">點任何一格，看是哪一張傳票。</p>';
       $('mapCell').innerHTML=out;
       if(si>=0 && $('inSel')) setTimeout(()=>$('inSel').scrollIntoView({block:'nearest',behavior:'smooth'}),60);
