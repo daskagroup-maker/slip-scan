@@ -1176,6 +1176,12 @@ body.camOn{overflow:hidden}
     camToast(title, esc(fmtCode(code))+'<br>'+md(date)+'　<span class="badge" style="--c:'+sizeColor(size)+'">'+esc(sizeLbl(size))+'</span>'); camInfo();
   }
   // explicit=true：從尺寸選單儲存（使用者確認過）→ 已存在就更新；連續掃描模式則不動舊資料
+  // 照「指定列・格」重新放一箱（重掃、改日期時用）
+  function reSticky(date,it,sp0){
+    stickyActive=true; placeItem(date,it); stickyActive=false; if(sp0) compactRow(sp0);
+    if(pileMode() && stickyG>0 && it.row && (it.row!==stickyRow || gOf(it.idx)!==stickyG)){ stickyRow=it.row; stickyG=gOf(it.idx); saveSR(); renderSticky(); }
+    else if(!(pileMode()&&stickyG>0) && it.row>stickyRow){ stickyRow=it.row; saveSR(); renderSticky(); }
+  }
   async function addItem(code, date, size, order, explicit, loc){
     if(loc===undefined) loc=stickyLoc;
     const hits=findCode(code), same=hits.find(h=>h.date===date);
@@ -1183,17 +1189,15 @@ body.camOn{overflow:hidden}
       if(stickyRow>0 || (explicit && (same.item.size!==size || (order && same.item.order!==order) || (loc && same.item.loc!==loc)))){
         const it=same.item, ok0=laneKey(date,it.size,it.loc,it.order), sp0=spotOf(date,it);
         if(explicit){ it.size=size; if(order) it.order=order; } if(loc) it.loc=loc;
-        if(stickyRow>0){   // 重掃＝照現在指定的列・格重新放
-          stickyActive=true; placeItem(date,it); stickyActive=false; compactRow(sp0);
-          if(pileMode() && stickyG>0 && it.row && (it.row!==stickyRow || gOf(it.idx)!==stickyG)){ stickyRow=it.row; stickyG=gOf(it.idx); saveSR(); renderSticky(); }
-          else if(!(pileMode()&&stickyG>0) && it.row>stickyRow){ stickyRow=it.row; saveSR(); renderSticky(); }
-        } else fixPos(date,it,ok0);
+        if(stickyRow>0) reSticky(date,it,sp0);   // 重掃＝照現在指定的列・格重新放
+        else fixPos(date,it,ok0);
         freshId=it.id; putItem(date,it); say('已更新 '+fmtCode(code)+' → '+locText(date,it.size,it.loc,it,it.order),'ok'); doneToast('✓ 已更新', code, date, it.size); render(); return;
         say('已更新 '+fmtCode(code)+' → '+sizeLbl(size),'ok'); doneToast('✓ 已更新', code, date, size); render(); putItem(date,same.item);
       } else { say('「'+fmtCode(code)+'」在 '+md(date)+' 已經登記過了','warn'); camToast('已經登記過', esc(fmtCode(code))+'<br>'+md(date), true); buzz([60,60,60]); }
       return;
     }
     if(hits.length){
+      if(!explicit && stickyRow>0){ const h=hits[0], it=h.item, sp0=spotOf(h.date,it); if(loc) it.loc=loc; reSticky(h.date,it,sp0); freshId=it.id; putItem(h.date,it); say('已更新 '+fmtCode(code)+' → '+locText(h.date,it.size,it.loc,it,it.order),'ok'); doneToast('✓ 已更新', code, h.date, it.size); render(); return; }
       if(!explicit){ say('「'+fmtCode(code)+'」已登記在 '+hits.map(h=>md(h.date)).join('、')+'，沒有變更','warn'); camToast('已登記在 '+md(hits[0].date), esc(fmtCode(code))+'<br>沒有變更', true); buzz([60,60,60]); return; }
       const h=hits[0], it=h.item, from=h.date;
       days[from].items=days[from].items.filter(i=>i!==it); if(!days[from].items.length) delete days[from];
@@ -1234,7 +1238,7 @@ body.camOn{overflow:hidden}
     const sp0=spotOf(from,it);
     d.items=d.items.filter(i=>i.id!==id); if(!d.items.length) delete days[from];
     (days[to]||(days[to]={date:to,items:[]})).items.unshift(it);
-    { const k0=laneKey(from,it.size,it.loc,it.order); fixPos(to,it,k0); }
+    { const k0=laneKey(from,it.size,it.loc,it.order); if(stickyRow>0 && laneOnly(to,it.size,it.loc)!==sp0.lane) reSticky(to,it,null); else fixPos(to,it,k0); }
     setTimeout(()=>{ if(compactRow(sp0)) render(); },0);
     freshId=it.id; render(); delItem(from,id); putItem(to,it);
     say('已移到 '+md(to),'ok');
