@@ -180,6 +180,13 @@ input[type=date],input[type=month]{flex:1;min-width:0;padding:8px 10px;border:1p
 .dot{display:inline-block;width:10px;height:10px;border-radius:50%;border:1px solid rgba(0,0,0,.2);vertical-align:-1px;margin-right:2px;font-style:normal}
 .mapgo{display:inline-block;margin-top:8px;border:2px solid var(--carbon);color:var(--carbon);background:var(--card);border-radius:10px;padding:8px 14px;font-weight:700;font-size:15px}
 .findcard .mapgo{margin:0 12px 10px}
+.vstrip{display:flex;flex-direction:column;gap:3px;margin-top:8px;max-width:340px}
+.vstrip>b{font-size:14px;margin-bottom:2px}
+.vs{display:flex;align-items:center;gap:6px;min-height:26px;border:1px solid rgba(0,0,0,.35);border-radius:6px;padding:0 8px;font-size:14px}
+.vs span{font-weight:900;min-width:1.4em}
+.vs i{font-style:normal}
+.vs.on{background:rgba(0,0,0,.18)}
+.vs.me{background:#d00;color:#fff;border-color:#d00;font-weight:900;min-height:32px}
 .strip{display:flex;align-items:center;gap:2px;margin-top:6px;flex-wrap:wrap}
 .strip span{font-size:13px;font-weight:700;margin-right:4px}
 .strip i{width:14px;height:20px;border-radius:3px;border:1px solid rgba(0,0,0,.35);font-style:normal;font-size:10px;font-weight:900;display:flex;align-items:center;justify-content:center}
@@ -1690,9 +1697,10 @@ body.camOn{overflow:hidden}
     for(const d in days) for(const x of days[d].items) if(!gone(d,x) && x.row===it.row && laneOnly(d,x.size,x.loc)===lane) used.add(x.idx);
     if(pileMode()){   // 一列只畫格數（例如 7 格），每格寫疊了幾箱
       const cnt={}; for(const d in days) for(const x of days[d].items) if(!gone(d,x) && x.row===it.row && laneOnly(d,x.size,x.loc)===lane){ const g=gOf(x.idx); cnt[g]=(cnt[g]||0)+1; }
-      const me=gOf(it.idx), G=Math.max(CAP(), me); let h='<div class="strip"><span>第 '+it.row+' 列</span>';
-      for(let g=1; g<=G; g++) h+='<i class="'+(g===me?'me':cnt[g]?'on':'')+'" style="width:auto;min-width:2.4em;height:28px;font-size:13px;padding:0 4px">'+(g===me?'第'+g+'格':cnt[g]?cnt[g]:'')+'</i>';
-      return h+'</div><div class="meta" style="margin-top:4px">這一疊從下面數第 <b>'+lvOf(it.idx)+'</b> 箱（共 '+(cnt[me]||0)+' 箱）</div>';
+      const me=gOf(it.idx), G=Math.max(CAP(), me);   // 直的：跟地圖一樣，第 1 格在最上面
+      let h='<div class="vstrip"><b>第 '+it.row+' 列</b>';
+      for(let g=1; g<=G; g++) h+='<div class="vs'+(g===me?' me':cnt[g]?' on':'')+'"><span>'+g+'</span><i>'+(g===me?'👉 這一格　疊第 '+lvOf(it.idx)+' 箱（共 '+(cnt[me]||0)+' 箱）':cnt[g]?cnt[g]+' 箱':'')+'</i></div>';
+      return h+'</div>';
     }
     const cap=Math.max(RCAP(), it.idx||0); let h='<div class="strip"><span>第 '+it.row+' 列</span>';
     for(let i=1;i<=cap;i++) h+='<i class="'+(i===it.idx?'me':used.has(i)?'on':'')+'">'+(i===it.idx?i:'')+'</i>';
