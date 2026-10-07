@@ -92,7 +92,7 @@ input[type=date],input[type=month]{flex:1;min-width:0;padding:8px 10px;border:1p
 .rpcols{display:flex;gap:10px;justify-content:center;margin-top:6px}
 .rpcol{display:flex;flex-direction:column;gap:5px;flex:1;max-width:140px}
 .rph{text-align:center;font-weight:900;font-size:15px}
-.rpcol button{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border:1px solid var(--line);border-radius:9px;background:var(--card);font-size:15px;color:var(--ink)}
+.rpcol button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:7px 6px;border:1px solid var(--line);border-radius:9px;background:var(--card);font-size:15px;color:var(--ink)}
 .rpcol button b{font-size:17px}
 .rpcol button small{font-size:13px;color:var(--ink2)}
 .rpcol button.some{background:#e8eef6}
@@ -1009,22 +1009,27 @@ body.camOn{overflow:hidden}
 
   /* ---------- 放置位置：自動 or 指定（固定一段時間都放同一個地方） ---------- */
   let stickyLoc=''; try{ stickyLoc=localStorage.getItem('slipSticky')||''; }catch(_){}
-  let stickyRow=0, stickyG=0, stickyActive=false; try{ stickyRow=+localStorage.getItem('slipStickyRow')||0; stickyG=+localStorage.getItem('slipStickyG')||0; }catch(_){}
-  const saveSR=()=>{ try{ localStorage.setItem('slipStickyRow',stickyRow); localStorage.setItem('slipStickyG',stickyG); }catch(_){} };
+  let stickyRow=0, stickyG=0, stickySub=-1, stickyActive=false; try{ stickyRow=+localStorage.getItem('slipStickyRow')||0; stickyG=+localStorage.getItem('slipStickyG')||0; const v=localStorage.getItem('slipStickySub'); stickySub=v===null?-1:+v; }catch(_){}
+  const saveSR=()=>{ try{ localStorage.setItem('slipStickyRow',stickyRow); localStorage.setItem('slipStickyG',stickyG); localStorage.setItem('slipStickySub',stickySub); }catch(_){} };
   function locShort(loc){ return loc ? placeLabel(placeOf(TODAY,'',loc)) : ''; }
   let rpCb=null;
   // 選「第幾列・第幾格」：loc＝哪一格的哪一區（沒有就不顯示數量）；cb(r,g)；r=0 表示自動
+  let rpSub=0, rpArgs=null;
   function openRowPick(loc, cb, exceptId, title){
+    rpArgs=[loc,cb,exceptId,title];
     rpCb=cb; const has=/^\d+-\d+-/.test(loc||''), L=has?lix().get(placeOf(TODAY,'',loc).key):null, stk=STK(), G=CAP(), cnt={};
     let maxR=0; if(L) L.forEach((R,row)=>R.ids.forEach((idx,id)=>{ if(id===exceptId) return; const k=row+'-'+gOf(idx); cnt[k]=(cnt[k]||0)+1; maxR=Math.max(maxR,row); }));
     const NR=Math.max(MAXR()&&MAXR()<=8?MAXR():1, maxR+(maxR>=(MAXR()||1)?1:0));
     const cur=exceptId?null:[stickyRow,stickyG];
-    let h='<button class="lpauto" data-rp="0-0">🔄 自動（不指定）</button><div class="rpcols">';
+    const S=layout.subs||[]; if(rpSub>=S.length) rpSub=0;
+    let h='<button class="lpauto" data-rp="0-0">🔄 自動（不指定）</button>';
+    if(!has && S.length>1) h+='<div class="meta" style="margin-top:8px">先選哪一區</div><div class="maptabs" style="margin:4px 0 2px">'+S.map((x,i)=>'<button data-rps="'+i+'" aria-pressed="'+(i===rpSub)+'">'+esc(x.n)+'</button>').join('')+'</div>';   // 沒選位置時：先選左／中／右
+    h+='<div class="rpcols">';
     for(let r=1;r<=NR;r++){ h+='<div class="rpcol"><div class="rph">第 '+r+' 列</div>';
       for(let g=1;g<=G;g++){ const n=cnt[r+'-'+g]||0, on=cur&&cur[0]===r&&cur[1]===g;
         h+='<button data-rp="'+r+'-'+g+'" class="'+(n>=stk?'full':n?'some':'')+(on?' on':'')+'"><b>第 '+g+' 格</b><small>'+(n?n+'/'+stk+'箱':'空')+'</small></button>'; }
       h+='</div>'; }
-    $('rpTitle').textContent=title||((has?locShort(loc)+'：':'')+'放第幾列、第幾格？'); $('rpGrid').innerHTML=h+'</div><p class="meta">放滿了會自動接下一格。</p>'; $('rpick').hidden=false;
+    $('rpTitle').textContent=title||((has?locShort(loc)+'：':'')+'放哪一區、第幾列、第幾格？'); $('rpGrid').innerHTML=h+'</div><p class="meta">放滿了會自動接下一格。</p>'; $('rpick').hidden=false;
   }
   // 指定的列・格裡第一個空的位置（滿了接下一格）
   function freeInPile(date,size,loc,r,g,exceptId){
@@ -1035,7 +1040,7 @@ body.camOn{overflow:hidden}
   function renderSticky(){
     const t = stickyLoc ? '📍 現在全部放：<b>'+esc(locShort(stickyLoc))+'</b>' : '📍 放置位置：自動（依出貨日）';
     const btn = stickyLoc ? '<button data-sticky="clear">改回自動</button>' : '<button data-sticky="set">指定位置</button>';
-    const t2 = stickyRow ? '📏 現在放：<b>第 '+stickyRow+' 列'+(pileMode()&&stickyG?'・第 '+stickyG+' 格':'')+'</b>（滿了接下一'+(pileMode()&&stickyG?'格':'列')+'）' : '📏 列・格：自動';
+    const t2 = stickyRow ? '📏 現在放：<b>'+(stickySub>=0&&!stickyLoc?esc(subName(stickySub))+'・':'')+'第 '+stickyRow+' 列'+(pileMode()&&stickyG?'・第 '+stickyG+' 格':'')+'</b>（滿了接下一'+(pileMode()&&stickyG?'格':'列')+'）' : '📏 列・格：自動';
     const b2 = stickyRow ? '<button data-srow="clear">改回自動</button>' : '<button data-srow="set">指定列・格</button>';
     [$('stickyBar'),$('stickyMain')].forEach(el=>{ if(!el) return; el.innerHTML='<div class="strow'+(stickyLoc?' on':'')+'"><span style="flex:1">'+t+'</span>'+btn+'</div><div class="strow'+(stickyRow?' on':'')+'"><span style="flex:1">'+t2+'</span>'+b2+'</div>'; el.classList.remove('on'); });
   }
@@ -1064,11 +1069,12 @@ body.camOn{overflow:hidden}
   $('lpFreeOk').onclick=()=>{ const v=$('lpFree').value.trim(); if(!v) return; $('lpick').hidden=true; lpCb&&lpCb('x:'+v); };
   document.addEventListener('click',e=>{
     const sr=e.target.closest('[data-srow]'); if(sr){
-      if(sr.dataset.srow==='clear'){ stickyRow=0; stickyG=0; }
-      else if(pileMode()){ openRowPick(stickyLoc, (r,g)=>{ stickyRow=r; stickyG=g; saveSR(); renderSticky(); if(pending) renderSheet(); if(camOn()) setStage(stage); if(r) say('之後掃的放：第 '+r+' 列・第 '+g+' 格','ok'); }); return; }   // 先選了位置 → 直接點要哪一列、哪一格
+      if(sr.dataset.srow==='clear'){ stickyRow=0; stickyG=0; stickySub=-1; }
+      else if(pileMode()){ if(stickySub>=0) rpSub=stickySub; openRowPick(stickyLoc, (r,g,sub)=>{ stickyRow=r; stickyG=g; stickySub = r && !/^\d+-\d+-/.test(stickyLoc) && (layout.subs||[]).length>1 ? sub : -1; saveSR(); renderSticky(); if(pending) renderSheet(); if(camOn()) setStage(stage); if(r) say('之後掃的放：'+(stickySub>=0?subName(stickySub)+'・':'')+'第 '+r+' 列・第 '+g+' 格','ok'); }); return; }   // 先選了位置 → 直接點要哪一列、哪一格
       else { const v=prompt('之後掃的貨，要從第幾列開始放？\n（這一列放滿了會自動接下一列）\n要指定到「第幾格」，請先按上面「指定位置」選好位置', stickyRow||''); if(v===null) return; stickyRow=Math.max(0,parseInt(v)||0); stickyG=0; }
       saveSR(); renderSticky(); if(pending) renderSheet(); if(camOn()) setStage(stage); return; }
-    const rp=e.target.closest('[data-rp]'); if(rp){ const [r,g]=rp.dataset.rp.split('-').map(Number); $('rpick').hidden=true; rpCb&&rpCb(r,g); return; }
+    const rs=e.target.closest('[data-rps]'); if(rs){ rpSub=+rs.dataset.rps; openRowPick(...rpArgs); return; }
+    const rp=e.target.closest('[data-rp]'); if(rp){ const [r,g]=rp.dataset.rp.split('-').map(Number); $('rpick').hidden=true; rpCb&&rpCb(r,g,rpSub); return; }
     if(e.target.id==='rpick' || e.target.closest('#rpClose')){ $('rpick').hidden=true; return; }
     const st=e.target.closest('[data-sticky]'); if(st){ if(st.dataset.sticky==='clear') setSticky(''); else openPicker('之後掃的全部放到…', stickyLoc, v=>setSticky(v)); return; }
     if(e.target.closest('#shLocBtn') && pending){ openPicker('這張放到…', pending.loc, v=>{ pending.loc=v; renderSheet(); }); return; }
@@ -1457,7 +1463,7 @@ body.camOn{overflow:hidden}
   const RCAP=()=>CAP()*STK();                             // 一列總共幾箱
   const gOf=i=>Math.ceil((i||1)/STK()), lvOf=i=>((i||1)-1)%STK()+1;   // 第幾格、由下往上第幾箱
   const spotTxt=sp=>sp&&sp.row?(STK()>1?'・第 '+sp.row+' 列・第 '+gOf(sp.idx)+' 格（疊第 '+lvOf(sp.idx)+' 箱）':'・第 '+sp.row+' 列・第 '+sp.idx+' 個'):'';
-  function locText(date,size,loc,sp,order){ if(sp && sp.ovf!==undefined) loc=sp.ovf; const P=placeOf(date,size,loc); return placeLabel(P)+(P?spotTxt(sp):'')+'（'+(P&&P.free==null?colLbl(order)+'・':'')+sizeLbl(size)+'）'+(P&&P.manual?' ✋':'')+(P&&P.ovf?'（原本那排滿了）':''); }
+  function locText(date,size,loc,sp,order){ if(sp && sp.ovf!==undefined) loc=sp.ovf; const P=placeOf(date,size,loc); return placeLabel(P)+(P?spotTxt(sp):'')+'（'+(P&&P.free==null?colLbl(order)+'・':'')+sizeLbl(size)+'）'+(P&&P.manual?' ✋':''); }
   const laneOnly=(date,size,loc)=>{ const P=placeOf(date,size,loc); return P?P.key:'none'; };
   const byColor=()=>layout.byColor!==false;
   const dynColor=()=>byColor() && layout.cmode!=='fix';   // 依現場：沒有固定列，新顏色開新列，多的接在同顏色旁邊
@@ -1490,11 +1496,12 @@ body.camOn{overflow:hidden}
   function allocSpot(date,size,loc,order,exceptId){
     const w=wdOf(order), cap=RCAP(), M=MAXR();
     if(stickyRow>0 && (stickyActive || exceptId==='__preview__')){   // 指定列：從第 N 列開始放，滿了接下一列
-      const lane=laneOnly(date,size,loc), rows=laneRows(lane,exceptId);
-      const ovf=(loc&&loc.startsWith('o:'))?'':undefined;
+      let lane=laneOnly(date,size,loc), ovf=(loc&&loc.startsWith('o:'))?'':undefined, home;
+      if(stickySub>=0 && (!loc || loc.startsWith('o:'))){ const H=placeOf(date,size,''); if(H && H.free==null){ lane=H.r+'-'+H.c+'-'+stickySub; ovf = stickySub===H.i ? '' : 'o:'+lane; home=H.key; } }   // 指定了哪一區
+      const rows=laneRows(lane,exceptId);
       if(pileMode() && stickyG>0){ const stk=STK(), G=CAP(); let r=stickyRow, g=stickyG;   // 指定格：疊滿了接下一格，再下一列
-        for(let n=0;n<2000;n++){ const used=rows[r]?rows[r].idx:new Set(); for(let l=1;l<=stk;l++){ const i=(g-1)*stk+l; if(!used.has(i)) return {row:r, idx:i, ovf}; } if(++g>G){ g=1; r++; } } }
-      for(let r=stickyRow; r<stickyRow+200; r++){ const used=rows[r]?rows[r].idx:new Set(); for(let i=1;i<=cap;i++) if(!used.has(i)) return {row:r, idx:i, ovf}; }
+        for(let n=0;n<2000;n++){ const used=rows[r]?rows[r].idx:new Set(); for(let l=1;l<=stk;l++){ const i=(g-1)*stk+l; if(!used.has(i)) return {row:r, idx:i, ovf, home}; } if(++g>G){ g=1; r++; } } }
+      for(let r=stickyRow; r<stickyRow+200; r++){ const used=rows[r]?rows[r].idx:new Set(); for(let i=1;i<=cap;i++) if(!used.has(i)) return {row:r, idx:i, ovf, home}; }
     }
     const tryLane=(lane,limit)=>{
       if(pileMode()) return pileSpot(lane,limit,w+'|'+(size||''),exceptId);
