@@ -1687,6 +1687,12 @@ body.camOn{overflow:hidden}
     if(!it.row) return '';
     const lane=laneOnly(date,it.size,it.loc), used=new Set();
     for(const d in days) for(const x of days[d].items) if(!gone(d,x) && x.row===it.row && laneOnly(d,x.size,x.loc)===lane) used.add(x.idx);
+    if(pileMode()){   // 一列只畫格數（例如 7 格），每格寫疊了幾箱
+      const cnt={}; for(const d in days) for(const x of days[d].items) if(!gone(d,x) && x.row===it.row && laneOnly(d,x.size,x.loc)===lane){ const g=gOf(x.idx); cnt[g]=(cnt[g]||0)+1; }
+      const me=gOf(it.idx), G=Math.max(CAP(), me); let h='<div class="strip"><span>第 '+it.row+' 列</span>';
+      for(let g=1; g<=G; g++) h+='<i class="'+(g===me?'me':cnt[g]?'on':'')+'" style="width:auto;min-width:2.4em;height:28px;font-size:13px;padding:0 4px">'+(g===me?'第'+g+'格':cnt[g]?cnt[g]:'')+'</i>';
+      return h+'</div><div class="meta" style="margin-top:4px">這一疊從下面數第 <b>'+lvOf(it.idx)+'</b> 箱（共 '+(cnt[me]||0)+' 箱）</div>';
+    }
     const cap=Math.max(RCAP(), it.idx||0); let h='<div class="strip"><span>第 '+it.row+' 列</span>';
     for(let i=1;i<=cap;i++) h+='<i class="'+(i===it.idx?'me':used.has(i)?'on':'')+'">'+(i===it.idx?i:'')+'</i>';
     return h+'</div>';
