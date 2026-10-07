@@ -1695,7 +1695,8 @@ body.camOn{overflow:hidden}
     if(!it.row) return '';
     const lane=laneOnly(date,it.size,it.loc), used=new Set();
     for(const d in days) for(const x of days[d].items) if(!gone(d,x) && x.row===it.row && laneOnly(d,x.size,x.loc)===lane) used.add(x.idx);
-    if(pileMode()){   // 一列只畫格數（例如 7 格），每格寫疊了幾箱
+    if(pileMode()) return '';   // 疊的模式：上面一行已經寫清楚位置，不用再畫
+    if(false){
       const cnt={}; for(const d in days) for(const x of days[d].items) if(!gone(d,x) && x.row===it.row && laneOnly(d,x.size,x.loc)===lane){ const g=gOf(x.idx); cnt[g]=(cnt[g]||0)+1; }
       const me=gOf(it.idx), G=Math.max(CAP(), me);   // 直的：跟地圖一樣，第 1 格在最上面
       let h='<div class="vstrip"><b>第 '+it.row+' 列</b>';
