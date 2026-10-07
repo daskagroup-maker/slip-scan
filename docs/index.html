@@ -1017,8 +1017,8 @@ body.camOn{overflow:hidden}
   let rpSub=0, rpArgs=null;
   function openRowPick(loc, cb, exceptId, title){
     rpArgs=[loc,cb,exceptId,title];
-    rpCb=cb; const has=/^\d+-\d+-/.test(loc||''), L=has?lix().get(placeOf(TODAY,'',loc).key):null, stk=STK(), G=CAP(), cnt={};
-    let maxR=0; if(L) L.forEach((R,row)=>R.ids.forEach((idx,id)=>{ if(id===exceptId) return; const k=row+'-'+gOf(idx); cnt[k]=(cnt[k]||0)+1; maxR=Math.max(maxR,row); }));
+    rpCb=cb; const has=/^\d+-\d+-/.test(loc||''), L=has?lix().get(placeOf(TODAY,'',loc).key):null, stk=STK(), G=CAP(), cnt={}, psz={};
+    let maxR=0; if(L) L.forEach((R,row)=>R.ids.forEach((idx,id)=>{ if(id===exceptId) return; const k=row+'-'+gOf(idx); cnt[k]=(cnt[k]||0)+1; if(R.cw&&!psz[k]) psz[k]=String(R.cw.get(id)||'').split('|')[1]; maxR=Math.max(maxR,row); }));
     const NR=Math.max(MAXR()&&MAXR()<=8?MAXR():1, maxR+(maxR>=(MAXR()||1)?1:0));
     const cur=exceptId?null:[stickyRow,stickyG];
     const S=layout.subs||[]; if(rpSub>=S.length) rpSub=0;
@@ -1026,15 +1026,15 @@ body.camOn{overflow:hidden}
     if(!has && S.length>1) h+='<div class="meta" style="margin-top:8px">先選哪一區</div><div class="maptabs" style="margin:4px 0 2px">'+S.map((x,i)=>'<button data-rps="'+i+'" aria-pressed="'+(i===rpSub)+'">'+esc(x.n)+'</button>').join('')+'</div>';   // 沒選位置時：先選左／中／右
     h+='<div class="rpcols">';
     for(let r=1;r<=NR;r++){ h+='<div class="rpcol"><div class="rph">第 '+r+' 列</div>';
-      for(let g=1;g<=G;g++){ const n=cnt[r+'-'+g]||0, on=cur&&cur[0]===r&&cur[1]===g;
-        h+='<button data-rp="'+r+'-'+g+'" class="'+(n>=stk?'full':n?'some':'')+(on?' on':'')+'"><b>第 '+g+' 格</b><small>'+(n?n+'/'+stk+'箱':'空')+'</small></button>'; }
+      for(let g=1;g<=G;g++){ const n=cnt[r+'-'+g]||0, on=cur&&cur[0]===r&&cur[1]===g, ch=stkOf(psz[r+'-'+g]);
+        h+='<button data-rp="'+r+'-'+g+'" class="'+(n>=ch?'full':n?'some':'')+(on?' on':'')+'"><b>第 '+g+' 格</b><small>'+(n?n+'/'+ch+'箱':'空')+'</small></button>'; }
       h+='</div>'; }
     $('rpTitle').textContent=title||((has?locShort(loc)+'：':'')+'放哪一區、第幾列、第幾格？'); $('rpGrid').innerHTML=h+'</div><p class="meta">放滿了會自動接下一格。</p>'; $('rpick').hidden=false;
   }
   // 指定的列・格裡第一個空的位置（滿了接下一格）
   function freeInPile(date,size,loc,r,g,exceptId){
     const rows=laneRows(laneOnly(date,size,loc),exceptId), stk=STK(), G=CAP();
-    for(let n=0;n<2000;n++){ const used=rows[r]?rows[r].idx:new Set(); for(let l=1;l<=stk;l++){ const i=(g-1)*stk+l; if(!used.has(i)) return {row:r, idx:i}; } if(++g>G){ g=1; r++; } }
+    for(let n=0;n<2000;n++){ const used=rows[r]?rows[r].idx:new Set(); for(let l=1;l<=stkOf(size);l++){ const i=(g-1)*stk+l; if(!used.has(i)) return {row:r, idx:i}; } if(++g>G){ g=1; r++; } }
     return {row:r, idx:1};
   }
   function renderSticky(){
@@ -1459,7 +1459,10 @@ body.camOn{overflow:hidden}
   const colLbl=o=>o?COLNAME(parse(o).getDay())+'色':'無貼紙';
   // 位置的最後兩層：第幾列（由上往下）、第幾個（一列最多 cap 個）。每個貼紙顏色從新的一列開始
   const CAP=()=>Math.max(1, +layout.cap || 15);          // 每列幾格
-  const STK=()=>Math.max(1, +layout.stk || 1);           // 每格往上疊幾箱
+  // 每種尺寸可以疊幾箱（沒填＝用「每格往上疊」）；layout.stkBy 存 {'60':10,'80':8} 或 '60:10,80:8'
+  const stkBy=()=>{ const v=layout.stkBy; if(!v) return {}; if(typeof v==='object') return v; const o={}; String(v).split(',').forEach(t=>{ const [k,n]=t.split(':'); if(k&&+n>0) o[k.trim()]=+n; }); return o; };
+  const stkOf=sz=>{ const n=+stkBy()[String(sz||'')]; return n>0?n:Math.max(1,+layout.stk||1); };
+  const STK=()=>Math.max(1, +layout.stk || 1, ...Object.values(stkBy()).map(Number).filter(n=>n>0));   // 每格最多疊幾箱（編號用）
   const RCAP=()=>CAP()*STK();                             // 一列總共幾箱
   const gOf=i=>Math.ceil((i||1)/STK()), lvOf=i=>((i||1)-1)%STK()+1;   // 第幾格、由下往上第幾箱
   const spotTxt=sp=>sp&&sp.row?(STK()>1?'・第 '+sp.row+' 列・第 '+gOf(sp.idx)+' 格（疊第 '+lvOf(sp.idx)+' 箱）':'・第 '+sp.row+' 列・第 '+sp.idx+' 個'):'';
@@ -1500,7 +1503,7 @@ body.camOn{overflow:hidden}
       if(stickySub>=0 && (!loc || loc.startsWith('o:'))){ const H=placeOf(date,size,''); if(H && H.free==null){ lane=H.r+'-'+H.c+'-'+stickySub; ovf = stickySub===H.i ? '' : 'o:'+lane; home=H.key; } }   // 指定了哪一區
       const rows=laneRows(lane,exceptId);
       if(pileMode() && stickyG>0){ const stk=STK(), G=CAP(); let r=stickyRow, g=stickyG;   // 指定格：疊滿了接下一格，再下一列
-        for(let n=0;n<2000;n++){ const used=rows[r]?rows[r].idx:new Set(); for(let l=1;l<=stk;l++){ const i=(g-1)*stk+l; if(!used.has(i)) return {row:r, idx:i, ovf, home}; } if(++g>G){ g=1; r++; } } }
+        for(let n=0;n<2000;n++){ const used=rows[r]?rows[r].idx:new Set(); for(let l=1;l<=stkOf(size);l++){ const i=(g-1)*stk+l; if(!used.has(i)) return {row:r, idx:i, ovf, home}; } if(++g>G){ g=1; r++; } } }
       for(let r=stickyRow; r<stickyRow+200; r++){ const used=rows[r]?rows[r].idx:new Set(); for(let i=1;i<=cap;i++) if(!used.has(i)) return {row:r, idx:i, ovf, home}; }
     }
     const tryLane=(lane,limit)=>{
@@ -1536,7 +1539,8 @@ body.camOn{overflow:hidden}
   function pileSpot(lane,limit,w,exceptId,onlyOld){
     const stk=STK(), G=CAP(), L=lix().get(lane), P=new Map();   // 'r|g' → {w, lv:Set}
     if(L) L.forEach((R,row)=>R.ids.forEach((idx,id)=>{ if(id===exceptId) return; const g=gOf(idx), k=row+'|'+g; let p=P.get(k); if(!p) P.set(k,p={r:row,g,w:R.cw?R.cw.get(id):R.w,lv:new Set()}); p.lv.add(lvOf(idx)); }));
-    const freeLv=p=>{ for(let l=1;l<=stk;l++) if(!p.lv.has(l)) return l; return 0; };
+    const capH=layout.pileMix?stk:stkOf(String(w).split('|')[1]);   // 這個尺寸可以疊幾箱
+    const freeLv=p=>{ for(let l=1;l<=capH;l++) if(!p.lv.has(l)) return l; return 0; };
     const K=k=>layout.pileMix?String(k).split('|')[0]:String(k);   // 歸貨照尺寸分：同顏色＋同尺寸才疊在一起
     const mine=[...P.values()].filter(p=>K(p.w)===K(w) && (!limit||p.r<=limit)).sort((a,b)=>a.r-b.r||a.g-b.g);
     for(const p of mine){ const l=freeLv(p); if(l) return {row:p.r, idx:(p.g-1)*stk+l}; }
@@ -1586,7 +1590,7 @@ body.camOn{overflow:hidden}
   function saveLayout(){
     slotCache.clear(); LIX=null;
     try{ localStorage.setItem('slipLayout', JSON.stringify(layout)); }catch(_){}
-    if(mode==='db' && rtdb) rtdb.ref(ROOT+'/layout').set({rmap:layout.rows.map((_,r)=>rmapOf(r)), names:layout.names||[], rows:layout.rows.map(row=>row.map(k=>(k||[]).join(',')||'-')), subs:(layout.subs||[]).map(x=>x.n+':'+(x.s||[]).join(',')), subDir:layout.subDir||'v', posFrom:layout.posFrom||'in', cap:CAP(), stk:STK(), compact:autoCompact(), byColor:byColor(), maxRows:MAXR(), anySize:!!layout.anySize, bcv:4, resv:layout.resv||'', cmode:layout.cmode||'dyn'}).catch(()=>{});   // 雲端存字串，空格存 '-'
+    if(mode==='db' && rtdb) rtdb.ref(ROOT+'/layout').set({rmap:layout.rows.map((_,r)=>rmapOf(r)), names:layout.names||[], rows:layout.rows.map(row=>row.map(k=>(k||[]).join(',')||'-')), subs:(layout.subs||[]).map(x=>x.n+':'+(x.s||[]).join(',')), subDir:layout.subDir||'v', posFrom:layout.posFrom||'in', cap:CAP(), stk:Math.max(1,+layout.stk||1), stkBy:Object.entries(stkBy()).map(([k,n])=>k+':'+n).join(','), compact:autoCompact(), byColor:byColor(), maxRows:MAXR(), anySize:!!layout.anySize, bcv:4, resv:layout.resv||'', cmode:layout.cmode||'dyn'}).catch(()=>{});   // 雲端存字串，空格存 '-'
   }
   let mapFilter='all', mapSel=null;
   const autoExp=()=>!$('autoExp') || $('autoExp').checked;
@@ -1856,6 +1860,7 @@ body.camOn{overflow:hidden}
         '<label class="ledit"><span>每列可放</span><input id="capIn" type="number" min="1" value="'+CAP()+'" style="flex:0 0 5em"><span style="width:auto">格</span></label>'+
         '<label class="ledit"><span>尺寸</span><select id="anyIn" style="flex:1;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--card);font-size:16px;color:var(--ink)"><option value="1"'+(layout.anySize?' selected':'')+'>不分尺寸（左滿了放中，再放右）</option><option value="0"'+(!layout.anySize?' selected':'')+'>照上面的尺寸分區</option></select></label>'+
         '<label class="ledit"><span>每格往上疊</span><input id="stkIn" type="number" min="1" value="'+STK()+'" style="flex:0 0 5em"><span style="width:auto">箱（不疊＝1）</span></label>'+
+        '<div class="ledit" style="flex-wrap:wrap"><span>各尺寸疊</span><span class="resv">'+sizes.map(z=>'<label>'+esc(sizeLbl(z))+'<input data-stkby="'+esc(z)+'" type="number" min="1" style="width:3.6em" placeholder="'+(+layout.stk||1)+'" value="'+(stkBy()[z]||'')+'"></label>').join('')+'</span><span class="meta" style="width:100%">箱。空白＝跟上面「每格往上疊」一樣</span></div>'+
         '<label class="ledit"><span>放的順序</span><select id="bcIn" style="flex:1;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--card);font-size:16px;color:var(--ink)"><option value="d"'+(dynColor()?' selected':'')+'>分顏色・依現場（多的接在同顏色旁邊）</option><option value="1"'+(byColor()&&!dynColor()?' selected':'')+'>分顏色・固定列（白第1列、黃第2列…）</option><option value="0"'+(!byColor()?' selected':'')+'>不分顏色・照順序放</option></select></label>'+
         '<div class="ledit" style="flex-wrap:wrap"><span>每色預留</span><span class="resv">'+WD_ORDER.map(w=>'<label style="background:rgb('+colors[w].rgb.join(',')+')">'+esc(COLNAME(w))+'<input data-resv="'+w+'" type="number" min="1" value="'+RESV(w)+'"></label>').join('')+'</span><span class="meta" style="width:100%">列（只有「固定列」才用。例如白色比較多，白填 2，白就用第 1～2 列）</span></div>'+
         '<label class="ledit"><span>拿走後</span><select id="cmpIn" style="flex:1;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--card);font-size:16px;color:var(--ink)"><option value="1"'+(autoCompact()?' selected':'')+'>後面的往前補（自動重新排號）</option><option value="0"'+(!autoCompact()?' selected':'')+'>留空位，下次放進來補</option></select></label>'+
@@ -1976,7 +1981,7 @@ body.camOn{overflow:hidden}
     LIX=null; assignMissingPos(); render(); return n;
   }
   $('mapEditBtn').onclick=()=>{
-    const before=mapEdit?JSON.stringify([byColor(),dynColor(),CAP(),STK(),MAXR(),!!layout.anySize,layout.subs,layout.resv||'']):null;
+    const before=mapEdit?JSON.stringify([byColor(),dynColor(),CAP(),STK(),JSON.stringify(stkBy()),MAXR(),!!layout.anySize,layout.subs,layout.resv||'']):null;
     let lanes0=null;
     if(mapEdit){ lanes0=new Map(); for(const d in days) days[d].items.forEach(it=>{ if(!gone(d,it)) lanes0.set(it.id, laneOnly(d,it.size,it.loc)); }); }
     if(mapEdit){
@@ -1984,11 +1989,11 @@ body.camOn{overflow:hidden}
         layout.rows[r][c]=t.value.split(/[\s,，、]+/).map(x=>x.trim()).filter(Boolean).map(x=>{ const m=x.match(/(\d{1,2})[\/月.\-](\d{1,2})/); return m?pad(+m[1])+'-'+pad(+m[2]):null; }).filter(Boolean); });
       const subs=[]; document.querySelectorAll('[data-subn]').forEach(t=>{ const i=t.dataset.subn, n=t.value.trim(); const ss=(document.querySelector('[data-subs="'+i+'"]')||{}).value||'';
         if(n) subs.push({n, s:ss.split(/[\s,，、]+/).map(x=>x.trim()).filter(Boolean)}); });
-      layout.subs=subs; if($('subDir')) layout.subDir=$('subDir').value; if($('posFrom')) layout.posFrom=$('posFrom').value; if($('capIn')) layout.cap=Math.max(1,parseInt($('capIn').value)||15); if($('anyIn')) layout.anySize=$('anyIn').value==='1'; if($('stkIn')) layout.stk=Math.max(1,parseInt($('stkIn').value)||1); if($('mrIn')) layout.maxRows=Math.max(0,parseInt($('mrIn').value)||0); if($('cmpIn')) layout.compact=$('cmpIn').value==='1'; if($('bcIn')){ const v=$('bcIn').value; layout.byColor=v!=='0'; layout.cmode = v==='1'?'fix':'dyn'; } if(document.querySelector('[data-resv]')) layout.resv=WD_ORDER.map(w=>Math.max(1,parseInt((document.querySelector('[data-resv="'+w+'"]')||{}).value)||1)).join(',');
+      layout.subs=subs; if($('subDir')) layout.subDir=$('subDir').value; if($('posFrom')) layout.posFrom=$('posFrom').value; if($('capIn')) layout.cap=Math.max(1,parseInt($('capIn').value)||15); if($('anyIn')) layout.anySize=$('anyIn').value==='1'; { const sb=document.querySelectorAll('[data-stkby]'); if(sb.length){ const o={}; sb.forEach(t=>{ const n=parseInt(t.value); if(n>0) o[t.dataset.stkby]=n; }); layout.stkBy=Object.keys(o).map(k=>k+':'+o[k]).join(','); } } if($('stkIn')) layout.stk=Math.max(1,parseInt($('stkIn').value)||1); if($('mrIn')) layout.maxRows=Math.max(0,parseInt($('mrIn').value)||0); if($('cmpIn')) layout.compact=$('cmpIn').value==='1'; if($('bcIn')){ const v=$('bcIn').value; layout.byColor=v!=='0'; layout.cmode = v==='1'?'fix':'dyn'; } if(document.querySelector('[data-resv]')) layout.resv=WD_ORDER.map(w=>Math.max(1,parseInt((document.querySelector('[data-resv="'+w+'"]')||{}).value)||1)).join(',');
       saveLayout();
       { let nmv=0; withBulk(()=>{ for(const d in days) days[d].items.forEach(it=>{ if(!lanes0.has(it.id)) return; if(laneOnly(d,it.size,it.loc)!==lanes0.get(it.id)){ placeItem(d,it); putItem(d,it); nmv++; } }); }); LIX=null; if(nmv) say('位置配置已儲存（'+nmv+' 箱換了格子，已重新排）','ok'); else say('位置配置已儲存','ok'); }
       render();
-      if(before!==JSON.stringify([byColor(),dynColor(),CAP(),STK(),MAXR(),!!layout.anySize,layout.subs,layout.resv||''])){
+      if(before!==JSON.stringify([byColor(),dynColor(),CAP(),STK(),JSON.stringify(stkBy()),MAXR(),!!layout.anySize,layout.subs,layout.resv||''])){
         const n=stockItems().length;
         if(n && confirm('排列規則改了。\n要把目前在庫的 '+n+' 箱照新規則重新排位置嗎？\n（現場的貨也要照新位置擺）')){ replaceAll(); say('已依新規則重新排好 '+n+' 箱','ok'); }
       }
