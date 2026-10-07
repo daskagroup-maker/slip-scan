@@ -85,6 +85,10 @@ input[type=date],input[type=month]{flex:1;min-width:0;padding:8px 10px;border:1p
 .scanbtn.look{background:var(--ink);color:var(--paper)}
 .scanbtn svg{width:26px;height:26px}
 .alt{display:flex;gap:8px;margin-top:8px}
+.maptabs{display:flex;gap:6px;flex-wrap:wrap;margin:4px 6px 8px}
+.maptabs button{padding:8px 14px;border:1px solid var(--line);border-radius:999px;background:var(--card);font-size:15px;color:var(--ink)}
+.maptabs button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.maptabs button b{margin-left:4px}
 .rpcols{display:flex;gap:10px;justify-content:center;margin-top:6px}
 .rpcol{display:flex;flex-direction:column;gap:5px;flex:1;max-width:140px}
 .rph{text-align:center;font-weight:900;font-size:15px}
@@ -847,7 +851,7 @@ body.camOn{overflow:hidden}
         if(changed){ try{ localStorage.setItem('slipColors', JSON.stringify(colors)); }catch(_){} renderColors(); } }
     }, ()=>{});
     rtdb.ref(ROOT+'/layout').on('value',s=>{ const v=s.val(); if(v&&v.rows&&!mapEdit){ v.subs=v.subs?Object.values(v.subs).map(t=>{ const [n,ss]=String(t).split(':'); return {n, s:(ss||'').split(',').filter(Boolean)}; }):layout.subs;
-      v.rows=Object.values(v.rows).map(row=>Object.values(row||{}).map(x=>typeof x==='string'?(x==='-'?[]:x.split(',').filter(Boolean)):(Array.isArray(x)?x:[]))); layout=v; try{localStorage.setItem('slipLayout',JSON.stringify(v));}catch(_){} migrateBC(); render(); } }, ()=>{});
+      v.rows=Object.values(v.rows).map(row=>Object.values(row||{}).map(x=>typeof x==='string'?(x==='-'?[]:x.split(',').filter(Boolean)):(Array.isArray(x)?x:[]))); if(v.rmap) v.rmap=Object.values(v.rmap); if(v.names) v.names=Object.values(v.names); layout=v; try{localStorage.setItem('slipLayout',JSON.stringify(v));}catch(_){} migrateBC(); render(); } }, ()=>{});
     rtdb.ref(ROOT+'/period').on('value',s=>{ const v=s.val(); if(v&&v.start){ period=v; $('pStart').value=v.start; $('pEnd').value=v.end||''; try{localStorage.setItem('slipPeriod',JSON.stringify(v));}catch(_){} renderBatchDates(); renderMap(); } }, ()=>{});
     rtdb.ref(ROOT+'/shipOffset').on('value',s=>{ const v=s.val(); if(v!==null && v!==undefined && document.activeElement!==$('cOff')){ $('cOff').value=v; try{localStorage.setItem('slipOff',v);}catch(_){} } }, ()=>{});
     rtdb.ref(ROOT+'/sizes').on('value',s=>{
@@ -1423,7 +1427,14 @@ body.camOn{overflow:hidden}
     for(let r=0;r<layout.rows.length && !res;r++) for(let c=0;c<layout.rows[r].length;c++) if((layout.rows[r][c]||[]).includes(k)){ res={r,c,id:r+'-'+c}; break; }
     slotCache.set(k,res); return res;
   }
-  const slotName=s=>(layout.names&&layout.names[s.r]||('第'+(s.r+1)+'排'))+' '+(s.c+1)+' 號';
+  /* 多張地圖：每一排屬於哪張地圖（layout.rmap），可以切換 */
+  const rmapOf=r=>(layout.rmap&&layout.rmap[r])||'倉庫1';
+  const mapList=()=>[...new Set(layout.rows.map((_,r)=>rmapOf(r)))];
+  let curMap=''; try{ curMap=localStorage.getItem('slipCurMap')||''; }catch(_){}
+  const theMap=()=>{ const L=mapList(); return L.includes(curMap)?curMap:L[0]; };
+  const setMap=m=>{ curMap=m; try{ localStorage.setItem('slipCurMap',m); }catch(_){} };
+  const visRows=()=>layout.rows.map((_,r)=>r).filter(r=>rmapOf(r)===theMap());
+  const slotName=s=>(mapList().length>1?rmapOf(s.r)+'・':'')+(layout.names&&layout.names[s.r]||('第'+(s.r+1)+'排'))+' '+(s.c+1)+' 號';
   // 格子裡依尺寸分小格（沒列到的尺寸放最後一小格）
   function subOf(size){ const S=layout.subs||[]; if(!S.length) return -1; if(layout.anySize) return 0; const i=S.findIndex(x=>(x.s||[]).includes(String(size||''))); return i<0?S.length-1:i; }
   const subName=i=>i<0?'':((layout.subs[i]||{}).n||'');
@@ -1568,7 +1579,7 @@ body.camOn{overflow:hidden}
   function saveLayout(){
     slotCache.clear(); LIX=null;
     try{ localStorage.setItem('slipLayout', JSON.stringify(layout)); }catch(_){}
-    if(mode==='db' && rtdb) rtdb.ref(ROOT+'/layout').set({names:layout.names||[], rows:layout.rows.map(row=>row.map(k=>(k||[]).join(',')||'-')), subs:(layout.subs||[]).map(x=>x.n+':'+(x.s||[]).join(',')), subDir:layout.subDir||'v', posFrom:layout.posFrom||'in', cap:CAP(), stk:STK(), compact:autoCompact(), byColor:byColor(), maxRows:MAXR(), anySize:!!layout.anySize, bcv:4, resv:layout.resv||'', cmode:layout.cmode||'dyn'}).catch(()=>{});   // 雲端存字串，空格存 '-'
+    if(mode==='db' && rtdb) rtdb.ref(ROOT+'/layout').set({rmap:layout.rows.map((_,r)=>rmapOf(r)), names:layout.names||[], rows:layout.rows.map(row=>row.map(k=>(k||[]).join(',')||'-')), subs:(layout.subs||[]).map(x=>x.n+':'+(x.s||[]).join(',')), subDir:layout.subDir||'v', posFrom:layout.posFrom||'in', cap:CAP(), stk:STK(), compact:autoCompact(), byColor:byColor(), maxRows:MAXR(), anySize:!!layout.anySize, bcv:4, resv:layout.resv||'', cmode:layout.cmode||'dyn'}).catch(()=>{});   // 雲端存字串，空格存 '-'
   }
   let mapFilter='all', mapSel=null;
   const autoExp=()=>!$('autoExp') || $('autoExp').checked;
@@ -1584,8 +1595,8 @@ body.camOn{overflow:hidden}
     // 斜前方俯視（像站在倉庫門口看）：x＝左右、y＝前後（0＝最裡面）、z＝高度
     const W=10, D=9, G=2.4, A=15, KX=-0.32, KY=0.62;
     const P=(x,y,z)=>[x + y*KX, y*KY - z];
-    const rowsN=layout.rows.length, colsN=Math.max(...layout.rows.map(r=>r.length));
-    let maxC=1; layout.rows.forEach((row,r)=>row.forEach((k,c)=>{ maxC=Math.max(maxC,(cell[r+'-'+c]||[]).length); }));
+    const VR=visRows(), rowsN=VR.length, colsN=Math.max(1,...VR.map(r=>layout.rows[r].length));
+    let maxC=1; VR.forEach(r=>layout.rows[r].forEach((k,c)=>{ maxC=Math.max(maxC,(cell[r+'-'+c]||[]).length); }));
     const HMAX=7;   // 只看有多少貨：矮一點，不擋到後面
     const pts=a=>a.map(p=>p[0].toFixed(2)+','+p[1].toFixed(2)).join(' ');
     const shade=(rgb,f)=>'rgb('+rgb.map(v=>Math.max(0,Math.min(255,Math.round(v*f)))).join(',')+')';
@@ -1605,11 +1616,11 @@ body.camOn{overflow:hidden}
       const m=P(XW/2,(y1+y2)/2,0); out+='<text x="'+m[0].toFixed(1)+'" y="'+(m[1]+1).toFixed(1)+'" class="t3a">通　道</text>'; }
     let labels='';
     let rowLab='';
-    layout.rows.forEach((row,r)=>{
+    VR.forEach((r,vi)=>{ const row=layout.rows[r];
       labels='';
-      const lp=P(-6, rowY(r)+D/2, 0); rowLab+='<text x="'+lp[0].toFixed(1)+'" y="'+(lp[1]+1).toFixed(1)+'" class="t3r">'+esc((layout.names&&layout.names[r])||('第'+(r+1)+'排'))+'</text>';
+      const lp=P(-6, rowY(vi)+D/2, 0); rowLab+='<text x="'+lp[0].toFixed(1)+'" y="'+(lp[1]+1).toFixed(1)+'" class="t3r">'+esc((layout.names&&layout.names[r])||('第'+(r+1)+'排'))+'</text>';
       row.forEach((keys,c)=>{
-        const id=r+'-'+c, L=cell[id]||[], x=c*(W+G), y=rowY(r);
+        const id=r+'-'+c, L=cell[id]||[], x=c*(W+G), y=rowY(vi);
         const isToday=L.some(q=>q.date===TODAY), isFound=(findHi&&L.some(q=>q.it.id===findHi))||(focus&&L.length);
         const sel = mapSel && !mapSel.startsWith('x:') && mapSel.split('-').slice(0,2).join('-')===id;
         let g='<g class="s3'+(isToday?' t':'')+(isFound?' f':'')+(sel?' sel':'')+'" data-slot="'+id+'"'+(isFound?' data-found="1"':'')+'>';
@@ -1629,7 +1640,7 @@ body.camOn{overflow:hidden}
     });
     const corners=[P(-2,-2,0),P(XW+2,-2,0),P(XW+2,YD+11,0),P(-2,YD+11,0),P(0,0,4),P(XW,0,4)];
     const minX=Math.min(...corners.map(p=>p[0]))-13, maxX=Math.max(...corners.map(p=>p[0]))+2, minY=Math.min(...corners.map(p=>p[1]))-2, maxY=Math.max(...corners.map(p=>p[1]))+3;
-    const byD={}; layout.rows.forEach((row,r)=>row.forEach((k,c)=>(cell[r+'-'+c]||[]).forEach(q=>{ byD[q.date]=(byD[q.date]||0)+1; })));
+    const byD={}; VR.forEach(r=>layout.rows[r].forEach((k,c)=>(cell[r+'-'+c]||[]).forEach(q=>{ byD[q.date]=(byD[q.date]||0)+1; })));
     const ds=Object.keys(byD).sort();
     return '<div class="daytot">'+(ds.length?ds.map(d=>'<span'+(d===TODAY?' class="t"':'')+'>'+md(d)+'<b>'+byD[d]+'</b>箱</span>').join(''):'<span>沒有在庫的貨</span>')+'</div>'+
       '<div class="w3d"><svg viewBox="'+minX.toFixed(1)+' '+minY.toFixed(1)+' '+(maxX-minX).toFixed(1)+' '+(maxY-minY).toFixed(1)+'" role="img" aria-label="倉庫 3D 圖">'+out+rowLab+'</svg></div>'+
@@ -1782,7 +1793,7 @@ body.camOn{overflow:hidden}
   function showOnMap(date,id){
     const it=days[date]&&days[date].items.find(i=>i.id===id); if(!it) return;
     const P=placeOf(date,it.size,it.loc);
-    findHi=id; cellHi=id; mapFilter='all'; mapEdit=false;
+    findHi=id; cellHi=id; mapFilter='all'; mapEdit=false; if(P && P.free==null && P.r!=null) setMap(rmapOf(P.r));
     ['mfAll','mfToday','mfTmr'].forEach(x=>$(x).setAttribute('aria-pressed', x==='mfAll'));
     mapSel = !P ? 'none' : P.free!=null ? 'x:'+P.free : P.r+'-'+P.c+'-'+P.i;
     if(camOn()) stopScan();
@@ -1809,8 +1820,8 @@ body.camOn{overflow:hidden}
       if(!P) none.push(x); else if(P.free!=null) (free[P.free]=free[P.free]||[]).push(x);
       else { const sid=P.r+'-'+P.c; (cell[sid+'-'+P.i]=cell[sid+'-'+P.i]||[]).push(x); (cell[sid]=cell[sid]||[]).push(x); } });
     const S=layout.subs||[];
-    let h='<div class="wh">';
-    layout.rows.forEach((row,r)=>{
+    let h='<div class="wh">'; const VR=visRows();
+    layout.rows.forEach((row,r)=>{ if(!VR.includes(r)) return;
       h+='<div class="whlbl">'+esc((layout.names&&layout.names[r])||('第'+(r+1)+'排'))+(mapEdit?'':'　<span style="opacity:.8">點格子看裡面怎麼擺</span>')+'</div><div class="'+(mapEdit?'whedit':'whrow')+'" style="grid-template-columns:repeat('+row.length+',minmax(112px,1fr))">';
       row.forEach((keys,c)=>{
         const id=r+'-'+c, L=cell[id]||[];
@@ -1826,9 +1837,10 @@ body.camOn{overflow:hidden}
         h+='<button class="slot2'+(L.length?'':' empty')+(nt?' today':'')+(mapSel&&mapSel.split('-').slice(0,2).join('-')===id&&!mapSel.startsWith('x:')?' sel':'')+(isFound?' found':'')+'" '+(isFound?'data-found="1" ':'')+'data-slot="'+id+'">'+
           '<span class="sn">'+(c+1)+'</span>'+(nt?'<span class="tbadge">今天 '+nt+'</span>':'')+'<span class="sd">'+dl+'</span><span class="sc">'+(L.length?L.length+'<small> 箱</small>':'空')+'</span>'+bar+'<span class="szs">'+szs+'</span></button>';
       });
-      h+='</div>'; if(r<layout.rows.length-1 && !mapEdit) h+='<div class="aisle">通道</div>';
+      h+='</div>'; if(r!==VR[VR.length-1] && !mapEdit) h+='<div class="aisle">通道</div>';
     });
     h+='</div>';
+    if(mapEdit) h+='<div class="row" style="gap:8px;margin:10px 0;flex-wrap:wrap"><button class="donebtn" id="addRowBtn">＋ 這張地圖加一排</button><button class="donebtn" id="addMapBtn">＋ 新增地圖</button><button class="donebtn" id="renMapBtn">✏️ 地圖改名</button></div>';
     if(mapEdit){
       h+='<div class="wh"><div class="whlbl" style="margin-top:12px">格子裡的小格（依尺寸）</div><div class="whedit">'+
         S.map((x,i)=>'<label class="ledit"><input data-subn="'+i+'" value="'+esc(x.n)+'" style="flex:0 0 4.5em" placeholder="名稱"><input data-subs="'+i+'" value="'+esc((x.s||[]).join(', '))+'" placeholder="尺寸，例：100, 120"></label>').join('')+
@@ -1846,6 +1858,8 @@ body.camOn{overflow:hidden}
         '<p class="meta" style="font-size:15px">上面：每格輸入要放的出貨日（月/日），兩個日期用逗號分開。<br>這裡：每個小格放哪些尺寸，沒列到的尺寸會放最後一個小格。名稱清空＝刪除。</p></div>';
     }
     if(view3d && !mapEdit) h=draw3D(cell, focus);
+    { const ML=mapList(); if(ML.length>1 || mapEdit){ const tc={}; all.forEach(x=>{ const P=placeOf(x.date,x.it.size,x.it.loc); if(P&&P.free==null){ const m=rmapOf(P.r); tc[m]=(tc[m]||0)+1; } });
+      h='<div class="maptabs">'+ML.map(m=>'<button data-map="'+esc(m)+'" aria-pressed="'+(m===theMap())+'">'+esc(m)+(tc[m]?' <b>'+tc[m]+'</b>':'')+'</button>').join('')+'</div>'+h; } }
     $('map').innerHTML=h;
     { const inGrid=all.length-none.length-Object.values(free).reduce((a,b)=>a+b.length,0);
       const fl = mapFilter==='today'?'今天出貨':mapFilter==='tmr'?'明天出貨':want?md(want)+' 出貨':'全部在庫';
@@ -1956,13 +1970,17 @@ body.camOn{overflow:hidden}
   }
   $('mapEditBtn').onclick=()=>{
     const before=mapEdit?JSON.stringify([byColor(),dynColor(),CAP(),STK(),MAXR(),!!layout.anySize,layout.subs,layout.resv||'']):null;
+    let lanes0=null;
+    if(mapEdit){ lanes0=new Map(); for(const d in days) days[d].items.forEach(it=>{ if(!gone(d,it)) lanes0.set(it.id, laneOnly(d,it.size,it.loc)); }); }
     if(mapEdit){
       document.querySelectorAll('[data-lay]').forEach(t=>{ const [r,c]=t.dataset.lay.split('-').map(Number);
         layout.rows[r][c]=t.value.split(/[\s,，、]+/).map(x=>x.trim()).filter(Boolean).map(x=>{ const m=x.match(/(\d{1,2})[\/月.\-](\d{1,2})/); return m?pad(+m[1])+'-'+pad(+m[2]):null; }).filter(Boolean); });
       const subs=[]; document.querySelectorAll('[data-subn]').forEach(t=>{ const i=t.dataset.subn, n=t.value.trim(); const ss=(document.querySelector('[data-subs="'+i+'"]')||{}).value||'';
         if(n) subs.push({n, s:ss.split(/[\s,，、]+/).map(x=>x.trim()).filter(Boolean)}); });
       layout.subs=subs; if($('subDir')) layout.subDir=$('subDir').value; if($('posFrom')) layout.posFrom=$('posFrom').value; if($('capIn')) layout.cap=Math.max(1,parseInt($('capIn').value)||15); if($('anyIn')) layout.anySize=$('anyIn').value==='1'; if($('stkIn')) layout.stk=Math.max(1,parseInt($('stkIn').value)||1); if($('mrIn')) layout.maxRows=Math.max(0,parseInt($('mrIn').value)||0); if($('cmpIn')) layout.compact=$('cmpIn').value==='1'; if($('bcIn')){ const v=$('bcIn').value; layout.byColor=v!=='0'; layout.cmode = v==='1'?'fix':'dyn'; } if(document.querySelector('[data-resv]')) layout.resv=WD_ORDER.map(w=>Math.max(1,parseInt((document.querySelector('[data-resv="'+w+'"]')||{}).value)||1)).join(',');
-      saveLayout(); say('位置配置已儲存','ok'); render();
+      saveLayout();
+      { let nmv=0; withBulk(()=>{ for(const d in days) days[d].items.forEach(it=>{ if(!lanes0.has(it.id)) return; if(laneOnly(d,it.size,it.loc)!==lanes0.get(it.id)){ placeItem(d,it); putItem(d,it); nmv++; } }); }); LIX=null; if(nmv) say('位置配置已儲存（'+nmv+' 箱換了格子，已重新排）','ok'); else say('位置配置已儲存','ok'); }
+      render();
       if(before!==JSON.stringify([byColor(),dynColor(),CAP(),STK(),MAXR(),!!layout.anySize,layout.subs,layout.resv||''])){
         const n=stockItems().length;
         if(n && confirm('排列規則改了。\n要把目前在庫的 '+n+' 箱照新規則重新排位置嗎？\n（現場的貨也要照新位置擺）')){ replaceAll(); say('已依新規則重新排好 '+n+' 箱','ok'); }
@@ -1977,7 +1995,21 @@ body.camOn{overflow:hidden}
   $('mfDate').onchange=e=>{ mapFilter=e.target.value?'d:'+e.target.value:'all'; mapSel=null; setTimeout(()=>{ const f=document.querySelector('[data-found]'); if(f) f.scrollIntoView({block:'nearest',inline:'center',behavior:'smooth'}); else if(!$('mapWarn').hidden) $('mapWarn').scrollIntoView({block:'nearest'}); },60); ['mfAll','mfToday','mfTmr'].forEach(x=>$(x).setAttribute('aria-pressed', x==='mfAll'&&!e.target.value)); renderMap(); };
   ['mfAll','mfToday','mfTmr'].forEach((id,i)=>{ $(id).onclick=()=>{ mapFilter=['all','today','tmr'][i]; mapSel=null; ['mfAll','mfToday','mfTmr'].forEach(x=>$(x).setAttribute('aria-pressed', x===id)); renderMap(); }; });
   const pickSlot=e=>{ const b=e.target.closest('[data-slot]'); if(!b||mapEdit) return false; cellHi=null; mapSel = mapSel===b.dataset.slot ? null : b.dataset.slot; renderMap(); if(mapSel) $('mapCell').scrollIntoView({block:'nearest',behavior:'smooth'}); return true; };
-  $('map').onclick=pickSlot;
+  const readLay=()=>document.querySelectorAll('[data-lay]').forEach(t=>{ const [r,c]=t.dataset.lay.split('-').map(Number);
+      layout.rows[r][c]=t.value.split(/[\s,，、]+/).map(x=>x.trim()).filter(Boolean).map(x=>{ const m=x.match(/(\d{1,2})[\/月.\-](\d{1,2})/); return m?pad(+m[1])+'-'+pad(+m[2]):null; }).filter(Boolean); });
+  const fixRmap=()=>{ layout.rmap=layout.rows.map((_,r)=>rmapOf(r)); if(!layout.names) layout.names=[]; };
+  $('map').onclick=e=>{
+    const mb=e.target.closest('[data-map]'); if(mb){ if(mapEdit) readLay(); setMap(mb.dataset.map); mapSel=null; renderMap(); return; }
+    if(e.target.closest('#addRowBtn')){ readLay(); fixRmap(); const m=theMap(), VR=visRows(), cols=VR.length?layout.rows[VR[0]].length:7;
+      const nm=prompt('新的一排叫什麼名字？', '第'+(VR.length+1)+'排'); if(nm===null) return;
+      layout.rows.push(Array.from({length:cols},()=>[])); layout.names.push(nm.trim()||('第'+(VR.length+1)+'排')); layout.rmap.push(m); renderMap(); say('已加一排，輸入每格的出貨日後按「✏️ 編輯位置」存好','ok'); return; }
+    if(e.target.closest('#addMapBtn')){ readLay(); fixRmap(); const nm=(prompt('新地圖的名字？（例：倉庫2、2樓）','倉庫'+(mapList().length+1))||'').trim(); if(!nm) return;
+      if(mapList().includes(nm)){ say('已經有「'+nm+'」了','warn'); return; }
+      ['上排','下排'].forEach(n=>{ layout.rows.push(Array.from({length:7},()=>[])); layout.names.push(n); layout.rmap.push(nm); }); setMap(nm); renderMap(); say('已新增「'+nm+'」，輸入每格的出貨日後按「✏️ 編輯位置」存好','ok'); return; }
+    if(e.target.closest('#renMapBtn')){ readLay(); fixRmap(); const old=theMap(), nm=(prompt('「'+old+'」改成什麼名字？', old)||'').trim(); if(!nm||nm===old) return;
+      layout.rmap=layout.rmap.map(x=>x===old?nm:x); setMap(nm); renderMap(); return; }
+    return pickSlot(e);
+  };
   document.addEventListener('click',e=>{ if(e.target.closest('#replaceBtn')){ const n=stockItems().length; if(n && confirm('把在庫的 '+n+' 箱照目前規則重新排位置？')){ mapEdit=false; replaceAll(); say('已重新排好 '+n+' 箱','ok'); } } });
   $('mapWarn').addEventListener('click',e=>{
     const a=e.target.closest('[data-assign]');
