@@ -771,7 +771,7 @@ body.camOn{overflow:hidden}
         if(changed){ try{ localStorage.setItem('slipColors', JSON.stringify(colors)); }catch(_){} renderColors(); } }
     }, ()=>{});
     rtdb.ref(ROOT+'/layout').on('value',s=>{ const v=s.val(); if(v&&v.rows&&!mapEdit){ v.subs=v.subs?Object.values(v.subs).map(t=>{ const [n,ss]=String(t).split(':'); return {n, s:(ss||'').split(',').filter(Boolean)}; }):layout.subs;
-      v.rows=Object.values(v.rows).map(row=>Object.values(row||{}).map(x=>typeof x==='string'?(x==='-'?[]:x.split(',').filter(Boolean)):(Array.isArray(x)?x:[]))); layout=v; try{localStorage.setItem('slipLayout',JSON.stringify(v));}catch(_){} render(); } }, ()=>{});
+      v.rows=Object.values(v.rows).map(row=>Object.values(row||{}).map(x=>typeof x==='string'?(x==='-'?[]:x.split(',').filter(Boolean)):(Array.isArray(x)?x:[]))); layout=v; try{localStorage.setItem('slipLayout',JSON.stringify(v));}catch(_){} migrateBC(); render(); } }, ()=>{});
     rtdb.ref(ROOT+'/period').on('value',s=>{ const v=s.val(); if(v&&v.start){ period=v; $('pStart').value=v.start; $('pEnd').value=v.end||''; try{localStorage.setItem('slipPeriod',JSON.stringify(v));}catch(_){} renderBatchDates(); renderMap(); } }, ()=>{});
     rtdb.ref(ROOT+'/shipOffset').on('value',s=>{ const v=s.val(); if(v!==null && v!==undefined && document.activeElement!==$('cOff')){ $('cOff').value=v; try{localStorage.setItem('slipOff',v);}catch(_){} } }, ()=>{});
     rtdb.ref(ROOT+'/sizes').on('value',s=>{
@@ -1278,6 +1278,13 @@ body.camOn{overflow:hidden}
   let layout=DEF_LAYOUT; try{ const v=JSON.parse(localStorage.getItem('slipLayout')||'null'); if(v&&v.rows) layout=v; }catch(_){}
   if(!layout.subs) layout.subs=DEF_LAYOUT.subs;
   if(layout.maxRows===undefined) layout.maxRows=15;
+  // 一次性：改成「一開始就分顏色」，在庫的貨照新規則重排
+  let bcMigrated=false;
+  function migrateBC(){
+    if(layout.bcv || bcMigrated) return; bcMigrated=true;
+    layout.byColor=true; layout.bcv=1;
+    setTimeout(()=>{ saveLayout(); const n=replaceAll(); if(n) say('已改成依貼紙顏色分列，在庫 '+n+' 箱已重新排位置','ok'); }, 800);
+  }
   let slotCache=new Map(), slotLayout=null;
   function slotOf(date){
     if(slotLayout!==layout){ slotCache.clear(); slotLayout=layout; }
@@ -1308,7 +1315,7 @@ body.camOn{overflow:hidden}
   const spotTxt=sp=>sp&&sp.row?'・第 '+sp.row+' 列・第 '+sp.idx+' 個':'';
   function locText(date,size,loc,sp,order){ if(sp && sp.ovf!==undefined) loc=sp.ovf; const P=placeOf(date,size,loc); return placeLabel(P)+(P?spotTxt(sp):'')+'（'+(P&&P.free==null?colLbl(order)+'・':'')+sizeLbl(size)+'）'+(P&&P.manual?' ✋':'')+(P&&P.ovf?'（原本那排滿了）':''); }
   const laneOnly=(date,size,loc)=>{ const P=placeOf(date,size,loc); return P?P.key:'none'; };
-  const byColor=()=>layout.byColor===true;   // 預設：照順序放，不依顏色分列
+  const byColor=()=>layout.byColor!==false;   // 預設：一開始就分顏色（日＝第1列…土＝第7列）   // 預設：照順序放，不依顏色分列
   const laneKey=(date,size,loc,order)=>laneOnly(date,size,loc)+'|'+(byColor()?wdOf(order):'');
   /* 位置索引（大量件數也快）：lane → row → {w, ids:Map(id→idx)}；每次畫面更新時重建一次 */
   let LIX=null, LPOS=null;
@@ -1384,7 +1391,7 @@ body.camOn{overflow:hidden}
   function saveLayout(){
     slotCache.clear(); LIX=null;
     try{ localStorage.setItem('slipLayout', JSON.stringify(layout)); }catch(_){}
-    if(mode==='db' && rtdb) rtdb.ref(ROOT+'/layout').set({names:layout.names||[], rows:layout.rows.map(row=>row.map(k=>(k||[]).join(',')||'-')), subs:(layout.subs||[]).map(x=>x.n+':'+(x.s||[]).join(',')), subDir:layout.subDir||'v', posFrom:layout.posFrom||'in', cap:CAP(), compact:autoCompact(), byColor:byColor(), maxRows:MAXR()}).catch(()=>{});   // 雲端存字串，空格存 '-'
+    if(mode==='db' && rtdb) rtdb.ref(ROOT+'/layout').set({names:layout.names||[], rows:layout.rows.map(row=>row.map(k=>(k||[]).join(',')||'-')), subs:(layout.subs||[]).map(x=>x.n+':'+(x.s||[]).join(',')), subDir:layout.subDir||'v', posFrom:layout.posFrom||'in', cap:CAP(), compact:autoCompact(), byColor:byColor(), maxRows:MAXR(), bcv:1}).catch(()=>{});   // 雲端存字串，空格存 '-'
   }
   let mapFilter='all', mapSel=null;
   const autoExp=()=>!$('autoExp') || $('autoExp').checked;
@@ -1463,6 +1470,7 @@ body.camOn{overflow:hidden}
         '<label class="ledit"><span>拿走後</span><select id="cmpIn" style="flex:1;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--card);font-size:16px;color:var(--ink)"><option value="1"'+(autoCompact()?' selected':'')+'>後面的往前補（自動重新排號）</option><option value="0"'+(!autoCompact()?' selected':'')+'>留空位，下次放進來補</option></select></label>'+
         '<label class="ledit"><span>第 1 列在</span><select id="posFrom" style="flex:1;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--card);font-size:16px;color:var(--ink)"><option value="in"'+(layout.posFrom!=='aisle'?' selected':'')+'>最上面</option><option value="aisle"'+(layout.posFrom==='aisle'?' selected':'')+'>最下面</option></select></label>'+
         '<label class="ledit"><input data-subn="'+S.length+'" value="" style="flex:0 0 4.5em" placeholder="＋新增"><input data-subs="'+S.length+'" value="" placeholder="尺寸"></label></div>'+
+        '<button class="donebtn" id="replaceBtn" style="margin:8px 0">⟳ 在庫的貨全部照目前規則重新排位置</button>'+
         '<p class="meta" style="font-size:15px">上面：每格輸入要放的出貨日（月/日），兩個日期用逗號分開。<br>這裡：每個小格放哪些尺寸，沒列到的尺寸會放最後一個小格。名稱清空＝刪除。</p></div>';
     }
     $('map').innerHTML=h;
@@ -1562,7 +1570,15 @@ body.camOn{overflow:hidden}
       $('mapCell').innerHTML=out;
     } else $('mapCell').innerHTML=noneTxt+'<p class="meta">點格子或小格，看裡面有哪幾張。紅框＝有今天出貨。</p>';
   }
+  // 規則改了 → 把在庫的貨照新規則重新排位置
+  function replaceAll(){
+    let n=0;
+    for(const d in days) for(const it of days[d].items){ if(gone(d,it)) continue;
+      if(!it.loc || it.loc.startsWith('o:')){ it.loc=''; it.oh=''; } it.row=0; it.idx=0; n++; }
+    LIX=null; assignMissingPos(); render(); return n;
+  }
   $('mapEditBtn').onclick=()=>{
+    const before=mapEdit?JSON.stringify([byColor(),CAP(),MAXR(),layout.subs]):null;
     if(mapEdit){
       document.querySelectorAll('[data-lay]').forEach(t=>{ const [r,c]=t.dataset.lay.split('-').map(Number);
         layout.rows[r][c]=t.value.split(/[\s,，、]+/).map(x=>x.trim()).filter(Boolean).map(x=>{ const m=x.match(/(\d{1,2})[\/月.\-](\d{1,2})/); return m?pad(+m[1])+'-'+pad(+m[2]):null; }).filter(Boolean); });
@@ -1570,6 +1586,10 @@ body.camOn{overflow:hidden}
         if(n) subs.push({n, s:ss.split(/[\s,，、]+/).map(x=>x.trim()).filter(Boolean)}); });
       layout.subs=subs; if($('subDir')) layout.subDir=$('subDir').value; if($('posFrom')) layout.posFrom=$('posFrom').value; if($('capIn')) layout.cap=Math.max(1,parseInt($('capIn').value)||15); if($('mrIn')) layout.maxRows=Math.max(0,parseInt($('mrIn').value)||0); if($('cmpIn')) layout.compact=$('cmpIn').value==='1'; if($('bcIn')) layout.byColor=$('bcIn').value==='1';
       saveLayout(); say('位置配置已儲存','ok'); render();
+      if(before!==JSON.stringify([byColor(),CAP(),MAXR(),layout.subs])){
+        const n=stockItems().length;
+        if(n && confirm('排列規則改了。\n要把目前在庫的 '+n+' 箱照新規則重新排位置嗎？\n（現場的貨也要照新位置擺）')){ replaceAll(); say('已依新規則重新排好 '+n+' 箱','ok'); }
+      }
     }
     mapEdit=!mapEdit; mapSel=null; renderMap();
   };
@@ -1581,6 +1601,7 @@ body.camOn{overflow:hidden}
   ['mfAll','mfToday','mfTmr'].forEach((id,i)=>{ $(id).onclick=()=>{ mapFilter=['all','today','tmr'][i]; mapSel=null; ['mfAll','mfToday','mfTmr'].forEach(x=>$(x).setAttribute('aria-pressed', x===id)); renderMap(); }; });
   const pickSlot=e=>{ const b=e.target.closest('[data-slot]'); if(!b||mapEdit) return false; cellHi=null; mapSel = mapSel===b.dataset.slot ? null : b.dataset.slot; renderMap(); if(mapSel) $('mapCell').scrollIntoView({block:'nearest',behavior:'smooth'}); return true; };
   $('map').onclick=pickSlot;
+  document.addEventListener('click',e=>{ if(e.target.closest('#replaceBtn')){ const n=stockItems().length; if(n && confirm('把在庫的 '+n+' 箱照目前規則重新排位置？')){ mapEdit=false; replaceAll(); say('已重新排好 '+n+' 箱','ok'); } } });
   $('mapWarn').addEventListener('click',e=>{
     const a=e.target.closest('[data-assign]');
     if(a){ const d=a.dataset.assign, k=d.slice(5);
@@ -2047,6 +2068,7 @@ body.camOn{overflow:hidden}
   };
 
   document.body.appendChild($('cam'));
+  setTimeout(()=>{ if(mode!=='db') migrateBC(); }, 3000);
   renderSticky();
   applyMode();
   function setZoom(z){
