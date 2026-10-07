@@ -1008,16 +1008,25 @@ body.camOn{overflow:hidden}
   let stickyRow=0, stickyG=0, stickyActive=false; try{ stickyRow=+localStorage.getItem('slipStickyRow')||0; stickyG=+localStorage.getItem('slipStickyG')||0; }catch(_){}
   const saveSR=()=>{ try{ localStorage.setItem('slipStickyRow',stickyRow); localStorage.setItem('slipStickyG',stickyG); }catch(_){} };
   function locShort(loc){ return loc ? placeLabel(placeOf(TODAY,'',loc)) : ''; }
-  function openRowPick(){
-    const has=/^\d+-\d+-/.test(stickyLoc), L=has?lix().get(placeOf(TODAY,'',stickyLoc).key):null, stk=STK(), G=CAP(), cnt={};
-    let maxR=0; if(L) L.forEach((R,row)=>R.ids.forEach(idx=>{ const k=row+'-'+gOf(idx); cnt[k]=(cnt[k]||0)+1; maxR=Math.max(maxR,row); }));
-    const NR=Math.max(MAXR()&&MAXR()<=8?MAXR():1, maxR+ (maxR>=(MAXR()||1)?1:0));
-    let h='<div class="rpcols">';
+  let rpCb=null;
+  // 選「第幾列・第幾格」：loc＝哪一格的哪一區（沒有就不顯示數量）；cb(r,g)；r=0 表示自動
+  function openRowPick(loc, cb, exceptId, title){
+    rpCb=cb; const has=/^\d+-\d+-/.test(loc||''), L=has?lix().get(placeOf(TODAY,'',loc).key):null, stk=STK(), G=CAP(), cnt={};
+    let maxR=0; if(L) L.forEach((R,row)=>R.ids.forEach((idx,id)=>{ if(id===exceptId) return; const k=row+'-'+gOf(idx); cnt[k]=(cnt[k]||0)+1; maxR=Math.max(maxR,row); }));
+    const NR=Math.max(MAXR()&&MAXR()<=8?MAXR():1, maxR+(maxR>=(MAXR()||1)?1:0));
+    const cur=exceptId?null:[stickyRow,stickyG];
+    let h='<button class="lpauto" data-rp="0-0">🔄 自動（不指定）</button><div class="rpcols">';
     for(let r=1;r<=NR;r++){ h+='<div class="rpcol"><div class="rph">第 '+r+' 列</div>';
-      for(let g=1;g<=G;g++){ const n=cnt[r+'-'+g]||0, on=stickyRow===r&&stickyG===g;
+      for(let g=1;g<=G;g++){ const n=cnt[r+'-'+g]||0, on=cur&&cur[0]===r&&cur[1]===g;
         h+='<button data-rp="'+r+'-'+g+'" class="'+(n>=stk?'full':n?'some':'')+(on?' on':'')+'"><b>第 '+g+' 格</b><small>'+(n?n+'/'+stk+'箱':'空')+'</small></button>'; }
       h+='</div>'; }
-    $('rpTitle').textContent=(has?locShort(stickyLoc)+'：':'')+'放第幾列、第幾格？'; $('rpGrid').innerHTML=h+'</div><p class="meta">放滿了會自動接下一格。</p>'; $('rpick').hidden=false;
+    $('rpTitle').textContent=title||((has?locShort(loc)+'：':'')+'放第幾列、第幾格？'); $('rpGrid').innerHTML=h+'</div><p class="meta">放滿了會自動接下一格。</p>'; $('rpick').hidden=false;
+  }
+  // 指定的列・格裡第一個空的位置（滿了接下一格）
+  function freeInPile(date,size,loc,r,g,exceptId){
+    const rows=laneRows(laneOnly(date,size,loc),exceptId), stk=STK(), G=CAP();
+    for(let n=0;n<2000;n++){ const used=rows[r]?rows[r].idx:new Set(); for(let l=1;l<=stk;l++){ const i=(g-1)*stk+l; if(!used.has(i)) return {row:r, idx:i}; } if(++g>G){ g=1; r++; } }
+    return {row:r, idx:1};
   }
   function renderSticky(){
     const t = stickyLoc ? '📍 現在全部放：<b>'+esc(locShort(stickyLoc))+'</b>' : '📍 放置位置：自動（依出貨日）';
@@ -1052,10 +1061,10 @@ body.camOn{overflow:hidden}
   document.addEventListener('click',e=>{
     const sr=e.target.closest('[data-srow]'); if(sr){
       if(sr.dataset.srow==='clear'){ stickyRow=0; stickyG=0; }
-      else if(pileMode()){ openRowPick(); return; }   // 先選了位置 → 直接點要哪一列、哪一格
+      else if(pileMode()){ openRowPick(stickyLoc, (r,g)=>{ stickyRow=r; stickyG=g; saveSR(); renderSticky(); if(pending) renderSheet(); if(camOn()) setStage(stage); if(r) say('之後掃的放：第 '+r+' 列・第 '+g+' 格','ok'); }); return; }   // 先選了位置 → 直接點要哪一列、哪一格
       else { const v=prompt('之後掃的貨，要從第幾列開始放？\n（這一列放滿了會自動接下一列）\n要指定到「第幾格」，請先按上面「指定位置」選好位置', stickyRow||''); if(v===null) return; stickyRow=Math.max(0,parseInt(v)||0); stickyG=0; }
       saveSR(); renderSticky(); if(pending) renderSheet(); if(camOn()) setStage(stage); return; }
-    const rp=e.target.closest('[data-rp]'); if(rp){ const [r,g]=rp.dataset.rp.split('-').map(Number); stickyRow=r; stickyG=g; saveSR(); $('rpick').hidden=true; renderSticky(); if(pending) renderSheet(); if(camOn()) setStage(stage); say('之後掃的放：第 '+r+' 列・第 '+g+' 格','ok'); return; }
+    const rp=e.target.closest('[data-rp]'); if(rp){ const [r,g]=rp.dataset.rp.split('-').map(Number); $('rpick').hidden=true; rpCb&&rpCb(r,g); return; }
     if(e.target.id==='rpick' || e.target.closest('#rpClose')){ $('rpick').hidden=true; return; }
     const st=e.target.closest('[data-sticky]'); if(st){ if(st.dataset.sticky==='clear') setSticky(''); else openPicker('之後掃的全部放到…', stickyLoc, v=>setSticky(v)); return; }
     if(e.target.closest('#shLocBtn') && pending){ openPicker('這張放到…', pending.loc, v=>{ pending.loc=v; renderSheet(); }); return; }
@@ -1171,8 +1180,15 @@ body.camOn{overflow:hidden}
     if(loc===undefined) loc=stickyLoc;
     const hits=findCode(code), same=hits.find(h=>h.date===date);
     if(same){
-      if(explicit && (same.item.size!==size || (order && same.item.order!==order) || (loc && same.item.loc!==loc))){
-        const ok0=laneKey(date,same.item.size,same.item.loc,same.item.order); same.item.size=size; if(order) same.item.order=order; if(loc) same.item.loc=loc; fixPos(date,same.item,ok0); freshId=same.item.id;
+      if(stickyRow>0 || (explicit && (same.item.size!==size || (order && same.item.order!==order) || (loc && same.item.loc!==loc)))){
+        const it=same.item, ok0=laneKey(date,it.size,it.loc,it.order), sp0=spotOf(date,it);
+        if(explicit){ it.size=size; if(order) it.order=order; } if(loc) it.loc=loc;
+        if(stickyRow>0){   // 重掃＝照現在指定的列・格重新放
+          stickyActive=true; placeItem(date,it); stickyActive=false; compactRow(sp0);
+          if(pileMode() && stickyG>0 && it.row && (it.row!==stickyRow || gOf(it.idx)!==stickyG)){ stickyRow=it.row; stickyG=gOf(it.idx); saveSR(); renderSticky(); }
+          else if(!(pileMode()&&stickyG>0) && it.row>stickyRow){ stickyRow=it.row; saveSR(); renderSticky(); }
+        } else fixPos(date,it,ok0);
+        freshId=it.id; putItem(date,it); say('已更新 '+fmtCode(code)+' → '+locText(date,it.size,it.loc,it,it.order),'ok'); doneToast('✓ 已更新', code, date, it.size); render(); return;
         say('已更新 '+fmtCode(code)+' → '+sizeLbl(size),'ok'); doneToast('✓ 已更新', code, date, size); render(); putItem(date,same.item);
       } else { say('「'+fmtCode(code)+'」在 '+md(date)+' 已經登記過了','warn'); camToast('已經登記過', esc(fmtCode(code))+'<br>'+md(date), true); buzz([60,60,60]); }
       return;
@@ -1210,7 +1226,7 @@ body.camOn{overflow:hidden}
   }
   async function patchItem(date,id,patch){
     const d=days[date]; if(!d) return; const it=d.items.find(i=>i.id===id); if(!it) return;
-    const pk=laneKey(date,it.size,it.loc,it.order), sp0=spotOf(date,it); Object.assign(it,patch); if(!('row' in patch) && !('idx' in patch)) fixPos(date,it,pk); putItem(date,it); if(sp0.row!==it.row || sp0.lane!==laneOnly(date,it.size,it.loc)) compactRow(sp0); render();
+    const pk=laneKey(date,it.size,it.loc,it.order), sp0=spotOf(date,it); Object.assign(it,patch); if(!('row' in patch) && !('idx' in patch)) fixPos(date,it,pk); putItem(date,it); if(sp0.row!==it.row || sp0.lane!==laneOnly(date,it.size,it.loc) || ('idx' in patch)) compactRow(sp0); render();
   }
   async function moveItem(from,id,to){
     if(!to||to===from) return;
@@ -2134,7 +2150,12 @@ body.camOn{overflow:hidden}
     const a=b.dataset.act;
     if(a==='del'){ if(confirm('刪除這張傳票？')) removeItem(li.dataset.date,li.dataset.id); }
     else if(a==='jump'){ go(li.dataset.date); showTab('day'); setMode('add'); window.scrollTo({top:0}); }
-    else if(a==='loc'){ const d0=li.dataset.date, id0=li.dataset.id, it0=(days[d0]&&days[d0].items.find(i=>i.id===id0))||{}; openPicker(fmtCode(it0.code||'')+' 移到…', it0.loc||'', v=>{ patchItem(d0,id0,{loc:v}); say('位置改為 '+(v?locShort(v):'自動'),'ok'); }); }
+    else if(a==='loc'){ const d0=li.dataset.date, id0=li.dataset.id, it0=(days[d0]&&days[d0].items.find(i=>i.id===id0))||{}; openPicker(fmtCode(it0.code||'')+' 移到…', it0.loc||'', v=>{
+      if(pileMode() && /^\d+-\d+-/.test(v)){   // 再選第幾列、第幾格
+        openRowPick(v, (r,g)=>{ if(!r){ patchItem(d0,id0,{loc:v}); say('位置改為 '+locShort(v),'ok'); return; }
+          const sp=freeInPile(d0,it0.size,v,r,g,id0); patchItem(d0,id0,{loc:v,row:sp.row,idx:sp.idx}); say('已移到 '+locShort(v)+'・第 '+sp.row+' 列・第 '+gOf(sp.idx)+' 格（疊第 '+lvOf(sp.idx)+' 箱）','ok'); }, id0, fmtCode(it0.code||'')+' 放 '+locShort(v)+' 的…');
+        return; }
+      patchItem(d0,id0,{loc:v}); say('位置改為 '+(v?locShort(v):'自動'),'ok'); }); }
     else if(a==='up'||a==='down'){ moveInRow(li.dataset.date, li.dataset.id, a==='up'?-1:1); }
     else if(a==='done'){ setDone(li.dataset.date, li.dataset.id, true); say('已出貨：'+fmtCode((days[li.dataset.date].items.find(i=>i.id===li.dataset.id)||{}).code||''),'ok'); }
     else if(a==='undone'){ setDone(li.dataset.date, li.dataset.id, false); }
