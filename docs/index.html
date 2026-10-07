@@ -248,6 +248,11 @@ input[type=date],input[type=month]{flex:1;min-width:0;padding:8px 10px;border:1p
 
 @keyframes f3{50%{opacity:.55}}
 @media (prefers-reduced-motion:reduce){.s3.f polygon{animation:none}}
+.daytot{display:flex;flex-wrap:wrap;gap:4px;margin:4px 8px 6px}
+.daytot span{display:flex;align-items:baseline;gap:3px;background:#e8eef6;border-radius:6px;padding:2px 7px;font-size:12px}
+.daytot span b{font-size:15px;margin-left:3px}
+.daytot span.t{background:#fde3e1;color:#c8372d}
+.t3c{font-weight:900;fill:#1d2a44}
 .t3n{font-size:5px;font-weight:900;text-anchor:middle;fill:#1d2a44;paint-order:stroke;stroke:#fff;stroke-width:1.2px}
 .t3t{font-size:3px;font-weight:900;text-anchor:middle;fill:#fff;paint-order:stroke;stroke:#c8372d;stroke-width:1.4px}
 .t3d{font-size:2.9px;fill:#8a93a3;font-weight:700;text-anchor:middle}
@@ -1516,7 +1521,7 @@ body.camOn{overflow:hidden}
     const P=(x,y,z)=>[x + y*KX, y*KY - z];
     const rowsN=layout.rows.length, colsN=Math.max(...layout.rows.map(r=>r.length));
     let maxC=1; layout.rows.forEach((row,r)=>row.forEach((k,c)=>{ maxC=Math.max(maxC,(cell[r+'-'+c]||[]).length); }));
-    const HMAX=18;
+    const HMAX=7;   // 只看有多少貨：矮一點，不擋到後面
     const pts=a=>a.map(p=>p[0].toFixed(2)+','+p[1].toFixed(2)).join(' ');
     const shade=(rgb,f)=>'rgb('+rgb.map(v=>Math.max(0,Math.min(255,Math.round(v*f)))).join(',')+')';
     const prism=(x,y,z,w,d,h,rgb)=>{
@@ -1543,25 +1548,27 @@ body.camOn{overflow:hidden}
         const isToday=L.some(q=>q.date===TODAY), isFound=(findHi&&L.some(q=>q.it.id===findHi))||(focus&&L.length);
         const sel = mapSel && !mapSel.startsWith('x:') && mapSel.split('-').slice(0,2).join('-')===id;
         let g='<g class="s3'+(isToday?' t':'')+(isFound?' f':'')+(sel?' sel':'')+'" data-slot="'+id+'"'+(isFound?' data-found="1"':'')+'>';
-        g+='<polygon class="tile" points="'+pts([P(x,y,0),P(x+W,y,0),P(x+W,y+D,0),P(x,y+D,0)])+'" fill="'+(L.length?'#dde3ea':'#f6f8fa')+'" stroke="'+(isToday?'#c8372d':isFound?'#ff9500':'#a9b3bf')+'" stroke-width="'+(isToday||isFound?.9:.3)+'"/>';
+        g+='<polygon class="tile" points="'+pts([P(x,y,0),P(x+W,y,0),P(x+W,y+D,0),P(x,y+D,0)])+'" fill="'+(isFound?'#ffb340':L.length?'#d3deeb':'#f6f8fa')+'" stroke="'+(isToday?'#c8372d':isFound?'#e08600':'#a9b3bf')+'" stroke-width="'+(isToday||isFound?.9:.3)+'"/>';
         let h=0;
         if(L.length){
           h=Math.max(1.6, HMAX*Math.sqrt(L.length/maxC));
-          const cw={}; L.forEach(q=>{ const w=wdOf(q.it.order); cw[w]=(cw[w]||0)+1; });
-          let z=0; [...WD_ORDER,'x'].filter(w=>cw[w]).forEach(w=>{ const hh=h*cw[w]/L.length; g+=prism(x+.9,y+.9,z,W-1.8,D-1.8,hh, w==='x'?[200,206,214]:colors[w].rgb); z+=hh; });
+          h=0;   // 平的：不畫立體，箱數寫在格子裡
         }
         out+=g+'</g>';
         const tp=P(x+W/2,y+D/2,h);
-        if(L.length) labels+='<text x="'+tp[0].toFixed(1)+'" y="'+(tp[1]-1.6).toFixed(1)+'" class="t3n" data-slot="'+id+'">'+L.length+'</text>'+(isToday?'<text x="'+tp[0].toFixed(1)+'" y="'+(tp[1]-6.2).toFixed(1)+'" class="t3t">今天</text>':'');
+        if(L.length) labels+=(isToday?'<text x="'+tp[0].toFixed(1)+'" y="'+(tp[1]-3).toFixed(1)+'" class="t3t">今天</text>':'');
         const fp=P(x+W/2, y+D+1.4, 0);
-        labels+='<text x="'+fp[0].toFixed(1)+'" y="'+(fp[1]+2).toFixed(1)+'" class="t3d"><tspan class="t3no">'+(c+1)+'</tspan>'+keys.map((k,j)=>'<tspan x="'+fp[0].toFixed(1)+'" dy="'+(j?3.1:3.4)+'"'+(L.some(q=>q.date.slice(5)===k)?' class="on"':'')+'>'+mdk(k)+'</tspan>').join('')+'</text>';
+        labels+='<text x="'+fp[0].toFixed(1)+'" y="'+(fp[1]+2).toFixed(1)+'" class="t3d"><tspan class="t3no">'+(c+1)+'</tspan>'+keys.map((k,j)=>'<tspan x="'+fp[0].toFixed(1)+'" dy="'+(j?3.1:3.4)+'"'+(L.some(q=>q.date.slice(5)===k)?' class="on"':'')+'>'+mdk(k)+(()=>{ const n=L.filter(q=>q.date.slice(5)===k).length; return n?' <tspan class="t3c">'+n+'箱</tspan>':''; })()+'</tspan>').join('')+'</text>';
       });
       out+=labels;
     });
-    const corners=[P(-2,-2,0),P(XW+2,-2,0),P(XW+2,YD+11,0),P(-2,YD+11,0),P(0,0,HMAX+9),P(XW,0,HMAX+9)];
+    const corners=[P(-2,-2,0),P(XW+2,-2,0),P(XW+2,YD+11,0),P(-2,YD+11,0),P(0,0,4),P(XW,0,4)];
     const minX=Math.min(...corners.map(p=>p[0]))-13, maxX=Math.max(...corners.map(p=>p[0]))+2, minY=Math.min(...corners.map(p=>p[1]))-2, maxY=Math.max(...corners.map(p=>p[1]))+3;
-    return '<div class="w3d"><svg viewBox="'+minX.toFixed(1)+' '+minY.toFixed(1)+' '+(maxX-minX).toFixed(1)+' '+(maxY-minY).toFixed(1)+'" role="img" aria-label="倉庫 3D 圖">'+out+rowLab+'</svg></div>'+
-      '<p class="meta" style="margin:4px 8px">高度＝箱數，顏色＝貼紙顏色（下面白、上面紫）。點任何一堆看裡面怎麼擺。</p>';
+    const byD={}; layout.rows.forEach((row,r)=>row.forEach((k,c)=>(cell[r+'-'+c]||[]).forEach(q=>{ byD[q.date]=(byD[q.date]||0)+1; })));
+    const ds=Object.keys(byD).sort();
+    return '<div class="daytot">'+(ds.length?ds.map(d=>'<span'+(d===TODAY?' class="t"':'')+'>'+md(d)+'<b>'+byD[d]+'</b>箱</span>').join(''):'<span>沒有在庫的貨</span>')+'</div>'+
+      '<div class="w3d"><svg viewBox="'+minX.toFixed(1)+' '+minY.toFixed(1)+' '+(maxX-minX).toFixed(1)+' '+(maxY-minY).toFixed(1)+'" role="img" aria-label="倉庫 3D 圖">'+out+rowLab+'</svg></div>'+
+      '<p class="meta" style="margin:4px 8px">上面＝每一天有幾箱，<b style="color:#e08600">橘色</b>＝要找的貨在這一格。點一格看裡面怎麼擺。</p>';
   }
   /* 格子內部 3D：一列 15 個小箱子，第 1 列在最裡面（最上面），往前排 */
   function draw3DLane(byR, order, cap){
