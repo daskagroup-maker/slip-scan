@@ -610,7 +610,7 @@ body.camOn{overflow:hidden}
     <div class="sizes" id="sizeBar"></div></div>
     <input type="checkbox" id="askEach" checked hidden>
     <div class="sticky light" id="stickyMain"></div>
-    <div class="period"><span>📅 出貨期間</span><input type="date" id="pStart"><span>～</span><input type="date" id="pEnd"></div>
+    <div class="period" hidden style="display:none"><span>📅 出貨期間</span><input type="date" id="pStart"><span>～</span><input type="date" id="pEnd"></div>
     <label class="check"><input type="checkbox" id="onlyTrack" checked> 只讀追蹤號碼（お問合せNo 12 碼），忽略傳票上其他條碼</label>
     <div id="eachOpts">
     <label class="check"><input type="checkbox" id="ocrDate" checked> 自動讀取傳票上的「発送日」當出貨日</label>
@@ -709,7 +709,7 @@ body.camOn{overflow:hidden}
   </section>
 
   <div class="foot">
-    <span><span id="syncState">連線中…</span> <small id="appVer" style="opacity:.6;margin-left:6px">版本 v95</small></span>
+    <span><span id="syncState">連線中…</span> <small id="appVer" style="opacity:.6;margin-left:6px">版本 v96</small></span>
     <span class="row" style="flex-wrap:wrap;justify-content:flex-end"><button id="install" hidden>安裝到手機</button><button id="csv">匯出 CSV</button><button id="wipe" style="color:var(--stamp);border-color:var(--stamp)">🗑 清除資料</button></span>
   </div>
   <div class="foot">
@@ -1122,9 +1122,14 @@ body.camOn{overflow:hidden}
   let period={start:'',end:''};
   try{ period=JSON.parse(localStorage.getItem('slipPeriod')||'null')||period; }catch(_){}
   if(!period.start){ const y=new Date().getMonth()>=2?new Date().getFullYear()+1:new Date().getFullYear(); period={start:y+'-01-20', end:y+'-02-13'}; }
+  // 日期按鈕：直接用地圖上各格設定的出貨日（所有地圖），不用另外設期間
   function periodDates(){
-    if(!period.start||!period.end||period.end<period.start) return [];
-    const out=[]; for(let d=period.start; d<=period.end && out.length<120; d=addDays(d,1)) out.push(d); return out;
+    const keys=new Set(); (layout.rows||[]).forEach(row=>row.forEach(k=>(k||[]).forEach(x=>keys.add(x))));
+    const t=parse(TODAY), y=t.getFullYear(), out=[];
+    keys.forEach(k=>{ const [m,d]=k.split('-').map(Number); let best=null;
+      for(const yy of [y-1,y,y+1]){ const dt=new Date(yy,m-1,d); const diff=(dt-t)/864e5; if(diff>=-45 && (best===null || diff<best.diff)) best={diff,s:ymd(dt)}; }
+      if(best) out.push(best.s); });
+    return out.sort();
   }
   function quickDates(){
     const P=periodDates(); if(P.length) return P;
