@@ -709,7 +709,7 @@ body.camOn{overflow:hidden}
   </section>
 
   <div class="foot">
-    <span><span id="syncState">連線中…</span> <small id="appVer" style="opacity:.6;margin-left:6px">版本 v93</small></span>
+    <span><span id="syncState">連線中…</span> <small id="appVer" style="opacity:.6;margin-left:6px">版本 v94</small></span>
     <span class="row" style="flex-wrap:wrap;justify-content:flex-end"><button id="install" hidden>安裝到手機</button><button id="csv">匯出 CSV</button><button id="wipe" style="color:var(--stamp);border-color:var(--stamp)">🗑 清除資料</button></span>
   </div>
   <div class="foot">
@@ -1260,8 +1260,8 @@ body.camOn{overflow:hidden}
       days[from].items=days[from].items.filter(i=>i!==it); if(!days[from].items.length) delete days[from];
       hits.slice(1).forEach(x=>{ days[x.date].items=days[x.date].items.filter(i=>i!==x.item); if(!days[x.date].items.length) delete days[x.date]; delItem(x.date,x.item.id); });
       const ok1=laneKey(from,it.size,it.loc,it.order); it.size=size; if(order) it.order=order; if(loc) it.loc=loc; it.ts=Date.now();
-      (days[date]||(days[date]={date,items:[]})).items.unshift(it); fixPos(date,it,ok1); freshId=it.id;
-      say('已把 '+fmtCode(code)+' 從 '+md(from)+' 改到 '+md(date),'ok');
+      (days[date]||(days[date]={date,items:[]})).items.unshift(it); if(stickyRow>0) reSticky(date,it,null); else fixPos(date,it,ok1); freshId=it.id;
+      say('已把 '+fmtCode(code)+' 從 '+md(from)+' 改到 '+md(date)+' → '+locText(date,it.size,it.loc,it,it.order),'ok');
       sessionList.unshift({code,date,size,order}); renderRecent();
       doneToast('✓ 已改到 '+md(date), code, date, size); render();
       delItem(from,it.id); putItem(date,it); return;
@@ -1547,7 +1547,10 @@ body.camOn{overflow:hidden}
     const w=wdOf(order), cap=RCAP(), M=MAXR();
     if(stickyRow>0 && (stickyActive || exceptId==='__preview__')){   // 指定列：從第 N 列開始放，滿了接下一列
       let lane=laneOnly(date,size,loc), ovf=(loc&&loc.startsWith('o:'))?'':undefined, home;
-      if(stickySub>=0 && (!loc || loc.startsWith('o:'))){ const H=placeOf(date,size,''); if(H && H.free==null){ lane=H.r+'-'+H.c+'-'+stickySub; ovf = stickySub===H.i ? '' : 'o:'+lane; home=H.key; } }   // 指定了哪一區
+      if(stickySub>=0 && !stickyLoc && !String(loc||'').startsWith('x:')){   // 指定了哪一區
+        const mm=String(loc||'').match(/^(\d+)-(\d+)-(-?\d+)$/), H=placeOf(date,size,'');
+        if(mm){ lane=mm[1]+'-'+mm[2]+'-'+stickySub; ovf=lane; }   // 原本手動放的：同一格、換到指定的區
+        else if(H && H.free==null){ lane=H.r+'-'+H.c+'-'+stickySub; ovf = stickySub===H.i ? '' : 'o:'+lane; home=H.key; } }
       const rows=laneRows(lane,exceptId);
       if(pileMode() && stickyG>0){ const stk=STK(), G=CAP(); let r=stickyRow, g=stickyG;   // 指定格：疊滿了接下一格，再下一列
         for(let n=0;n<2000;n++){ const used=rows[r]?rows[r].idx:new Set(); for(let l=1;l<=stkOf(size);l++){ const i=(g-1)*stk+l; if(!used.has(i)) return {row:r, idx:i, ovf, home}; } if(++g>G){ g=1; r++; } } }
