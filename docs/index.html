@@ -500,11 +500,12 @@ body.camOn{overflow:hidden}
 /* month board */
 .board{overflow-x:auto;margin-top:10px;border:1px solid var(--line);border-radius:10px;background:var(--card)}
 .board table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:14px}
-.board th,.board td{padding:8px 6px;text-align:center;border-bottom:1px solid var(--line);white-space:nowrap}
+.board th,.board td{padding:8px 4px;text-align:center;border-bottom:1px solid var(--line);white-space:nowrap}
 .board th{font-size:13px;color:var(--ink2);font-weight:500;position:sticky;top:0;background:var(--card)}
 .board th.szh{color:var(--c);font-weight:900}
 .board td.d{text-align:left;padding-left:10px;font-weight:700}
-.board td.d small{font-weight:400;color:var(--ink2);margin-left:4px}
+.board td.d small{font-weight:400;color:var(--ink2);margin-left:2px;font-size:11px}
+.board th.mdone,.board th.min{white-space:normal;line-height:1.1;font-size:12px}
 .board tr.past td.d{color:var(--ink2)}
 .board tr.today td.d{color:var(--stamp)}
 .board td button{min-width:34px;border:0;border-radius:6px;padding:3px 6px;background:var(--c);color:var(--onc);font-weight:900}
@@ -1299,8 +1300,8 @@ body.camOn{overflow:hidden}
   function onCode(raw, manual){
     let code=normCode(raw); if(!code) return;
     if(appMode==='look' && manual && code.length<12){   // 查詢：輸入後幾碼也找得到
-      const q=code.toLowerCase(), M=[]; for(const d in days) days[d].items.forEach(i=>{ if(!gone(d,i) && i.code.toLowerCase().endsWith(q)) M.push(i.code); });
-      const U=[...new Set(M)];
+      const q=code.toLowerCase(), M=[], M2=[]; for(const d in days) days[d].items.forEach(i=>{ if(i.code.toLowerCase().endsWith(q)) (gone(d,i)?M2:M).push(i.code); });
+      let U=[...new Set(M)]; if(!U.length) U=[...new Set(M2)];   // 在庫的優先；找不到才找已出貨的
       if(U.length===1) code=U[0];
       else if(U.length>1){ say('有 '+U.length+' 張的後幾碼一樣，請多輸入幾碼：'+U.slice(0,5).map(fmtCode).join('、'),'warn'); return; }
       else { say('找不到「'+raw+'」','warn'); return; }
@@ -1373,7 +1374,7 @@ body.camOn{overflow:hidden}
       const late = h.date<TODAY ? '<div class="meta" style="color:var(--stamp)">出貨日已過</div>' : (h.date===TODAY?'<div class="meta" style="color:var(--stamp)">今天出貨</div>':'');
       const loc = '<div class="locbig" style="'+stkStyle(h.item.order)+'">📍 '+esc(locText(h.date,h.item.size,h.item.loc,h.item,h.item.order))+'</div>'+'<button class="mapgo" data-showmap="'+h.date+'|'+h.item.id+'">🗺 在地圖上看</button>';
       return '<div class="big"><div class="bd">'+md(h.date)+'</div><div class="bs" style="--c:'+sizeColor(h.item.size)+'">'+esc(sizeLbl(h.item.size))+'</div></div>'+loc+late+
-        (h.item.done?'<div class="meta" style="color:var(--ok)">✓ 已出貨</div>':'<div><button class="donebtn" data-lookdone="'+h.date+'|'+h.item.id+'" style="font-size:16px;padding:8px 16px;margin-top:6px">✓ 出貨了</button></div>')+
+        (h.item.done?'<div class="meta" style="color:var(--ok)">✓ 已拿走／出貨</div><div><button class="donebtn" data-lookundo="'+h.date+'|'+h.item.id+'|'+esc(h.item.code)+'" style="font-size:16px;padding:8px 16px;margin-top:6px;border-color:var(--stamp);color:var(--stamp)">↩ 復原（還在倉庫）</button></div>':'<div><button class="donebtn" data-lookdone="'+h.date+'|'+h.item.id+'" style="font-size:16px;padding:8px 16px;margin-top:6px">✓ 出貨了</button></div>')+
         (h.item.note?'<div class="meta">'+esc(h.item.note)+'</div>':'');
     }).join('')+(hits.length>1?'<div class="meta" style="color:var(--stamp)">這張登記在 '+hits.length+' 個日期</div>':'');
     buzz(80); if(camOn()){ sessionN++; camInfo(); const c=$('cam'); c.classList.remove('hit','bad'); void c.offsetWidth; c.classList.add('hit'); setTimeout(()=>c.classList.remove('hit'),800); }
@@ -1931,7 +1932,7 @@ body.camOn{overflow:hidden}
     if(slotSel && !mapEdit){
       const [rr,cc,si]=slotSel, sid=rr+'-'+cc, keys=layout.rows[rr]&&layout.rows[rr][cc]||[], L=cell[sid]||[];
       let out=noneTxt+'<div class="inhead"><b>📍 '+esc(slotName({r:rr,c:cc}))+'</b>　'+keys.map(mdk).join('・')+'　共 '+L.length+' 箱</div><button class="donebtn" data-slot="'+sid+'" style="margin:2px 0 6px">✕ 關閉，回到全部</button>';
-      out+='<div class="inlegend">每一格＝一箱，顏色＝貼紙顏色　<i class="lg2 t"></i>今天出貨　<i class="lg2 f"></i>正在找的</div>';
+      out+='<div class="inlegend">'+(pileMode()?'每一格＝一疊，數字＝疊了幾箱':'每一格＝一箱')+'，顏色＝貼紙顏色　<i class="lg2 t"></i>今天出貨　<i class="lg2 f"></i>正在找的</div>';
       const cap=RCAP(), up=layout.posFrom!=='aisle';
       if(layout.colDir!=='h'){ out+=drawSlotV(sid, S.length?S:[{n:'',s:[]}], cell, si, cap); }
       else (S.length?S:[{n:'',s:[]}]).forEach((sub,i)=>{
@@ -2170,18 +2171,18 @@ body.camOn{overflow:hidden}
     const used=new Set(); dates.forEach(d=>days[d].items.forEach(i=>used.add(i.size||'')));
     const cols=[...sizes.filter(s=>used.has(s)), ...[...used].filter(k=>!sizes.includes(k))];
     if(!dates.length){ $('board').innerHTML='<div class="empty"><b>'+y+'年'+m+'月 沒有紀錄</b></div>'; $('cell').innerHTML=''; return; }
-    const tot={}; let all=0, allDone=0, allIn=0;
-    let h='<table><thead><tr><th style="text-align:left;padding-left:10px">出貨日</th>'+cols.map(c=>'<th class="szh" style="--c:'+sizeColor(c)+'">'+esc(sizeLbl(c))+'</th>').join('')+'<th>合計</th><th class="mdone">拿走</th><th class="min">在庫</th></tr></thead><tbody>';
+    const tot={}; let all=0, allDone=0, allIn=0, allAuto=0;
+    let h='<table><thead><tr><th style="text-align:left;padding-left:10px">出貨日</th>'+cols.map(c=>'<th class="szh" style="--c:'+sizeColor(c)+'">'+esc(sizeLbl(c))+'</th>').join('')+'<th>合計</th><th class="mdone">拿走</th><th class="mdone">自動<br>出貨</th><th class="min">在庫</th></tr></thead><tbody>';
     dates.forEach(d=>{
       const cnt=sizeCounts(days[d].items); const n=days[d].items.length; all+=n;
-      const nd=days[d].items.filter(i=>i.done).length, ni=days[d].items.filter(i=>!gone(d,i)).length; allDone+=nd; allIn+=ni;
+      const nd=days[d].items.filter(i=>i.done).length, ni=days[d].items.filter(i=>!gone(d,i)).length, na=n-nd-ni; allDone+=nd; allIn+=ni; allAuto+=na;
       const cls=[d<TODAY?'past':'', d===TODAY?'today':'', cellSel&&cellSel.date===d?'sel':''].join(' ');
       h+='<tr class="'+cls+'"><td class="d">'+md(d)+(d===TODAY?'<small>今天</small>':'')+'</td>'+cols.map(c=>{
         tot[c]=(tot[c]||0)+(cnt[c]||0);
         return cnt[c] ? '<td><button data-cell="'+d+'|'+esc(c)+'" style="--c:'+sizeColor(c)+'">'+cnt[c]+'</button></td>' : '<td class="z">·</td>';
-      }).join('')+'<td><button data-cell="'+d+'|*" style="--c:var(--ink)">'+n+'</button></td><td class="mdone">'+(nd||'·')+'</td><td class="min">'+(ni||'·')+'</td></tr>';
+      }).join('')+'<td><button data-cell="'+d+'|*" style="--c:var(--ink)">'+n+'</button></td><td class="mdone">'+(nd||'·')+'</td><td class="mdone">'+(na||'·')+'</td><td class="min">'+(ni||'·')+'</td></tr>';
     });
-    h+='</tbody><tfoot><tr><td class="d">合計</td>'+cols.map(c=>'<td style="color:'+sizeColor(c)+'">'+tot[c]+'</td>').join('')+'<td>'+all+'</td><td class="mdone">'+allDone+'</td><td class="min">'+allIn+'</td></tr></tfoot></table><p class="meta">合計＝這天登記的全部箱數，拿走＝按過「出貨了／拿走」，在庫＝還在倉庫（出貨日過了也不算在庫）。</p>';
+    h+='</tbody><tfoot><tr><td class="d">合計</td>'+cols.map(c=>'<td style="color:'+sizeColor(c)+'">'+tot[c]+'</td>').join('')+'<td>'+all+'</td><td class="mdone">'+allDone+'</td><td class="mdone">'+allAuto+'</td><td class="min">'+allIn+'</td></tr></tfoot></table><p class="meta">合計＝這天登記的全部箱數，拿走＝按過「出貨了／拿走」，自動出貨＝沒按拿走、出貨日過了自動算出貨，在庫＝還在倉庫。合計＝拿走＋自動出貨＋在庫。</p>';
     $('board').innerHTML=h;
     // cell list
     if(cellSel && days[cellSel.date]){
@@ -2230,7 +2231,8 @@ body.camOn{overflow:hidden}
   }
 
   /* ---------- events ---------- */
-  $('lookup').onclick=e=>{ const b=e.target.closest('[data-lookdone]'); if(b){ const [d,id]=b.dataset.lookdone.split('|'); setDone(d,id,true); b.outerHTML='<div class="meta" style="color:var(--ok)">✓ 已出貨</div>'; buzz(60); return; } if(camOn()) $('lookup').classList.remove('on'); };
+  $('lookup').onclick=e=>{ const u=e.target.closest('[data-lookundo]'); if(u){ const [d,id,c]=u.dataset.lookundo.split('|'); if(!confirm('這箱還在倉庫？\n按確定會放回地圖，重新排一個位置。')) return; setDone(d,id,false); setTimeout(()=>{ showLookup(c); say('已復原，請照新位置放好','ok'); },50); return; }
+    const b=e.target.closest('[data-lookdone]'); if(b){ const [d,id]=b.dataset.lookdone.split('|'); setDone(d,id,true); b.outerHTML='<div class="meta" style="color:var(--ok)">✓ 已出貨</div>'; buzz(60); return; } if(camOn()) $('lookup').classList.remove('on'); };
   $('mAdd').onclick=()=>setMode('add');
   $('mLook').onclick=()=>setMode('look');
   $('prev').onclick=()=>shift(-1); $('next').onclick=()=>shift(1);
@@ -2568,8 +2570,8 @@ body.camOn{overflow:hidden}
     sessionList=[]; renderRecent(); render(); say('已清除 '+n+' 筆','ok');
   };
   $('csv').onclick=async()=>{
-    const rows=[['出貨日','箱子尺寸','訂貨日','條碼','備註','登記時間']];
-    Object.keys(days).sort().forEach(d=>days[d].items.slice().reverse().forEach(i=>rows.push([d,sizeLbl(i.size),i.order||'',i.code,i.note||'',i.t||''])));
+    const rows=[['出貨日','箱子尺寸','訂貨日','貼紙顏色','條碼','放置位置','狀態','備註','登記時間']];
+    Object.keys(days).sort().forEach(d=>days[d].items.slice().reverse().forEach(i=>rows.push([d,sizeLbl(i.size),i.order||'',i.order?COLNAME(wdOf(i.order)):'無貼紙',i.code,locText(d,i.size,i.loc,i,i.order),i.done?'已拿走':(gone(d,i)?'自動出貨（日期已過）':'在庫'),i.note||'',i.t||''])));
     if(rows.length===1){ say('還沒有資料可以匯出'); return; }
     const csv='\ufeff'+rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\r\n');
     const url=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
