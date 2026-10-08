@@ -294,17 +294,19 @@ form.manual.big button{font-size:20px;padding:0 22px}
 .t5n{font-size:2.6px;font-weight:900;text-anchor:middle;fill:#1d2a44}
 .t5n.on{fill:#c8372d}
 .vmap{display:flex;align-items:stretch;gap:0;overflow-x:auto;padding:6px 0}
+.vadd{flex:0 0 26px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;margin:0 2px;border:2px dashed var(--line);border-radius:8px;background:transparent;color:var(--ink2);font-size:12px;line-height:1.2;padding:6px 0}
+.vadd b{font-size:18px}
 .vaisle{flex:0 0 26px;display:flex;align-items:center;justify-content:center;border-left:2px dashed var(--line);border-right:2px dashed var(--line);margin:0 3px;color:var(--ink2);font-weight:700}
-.varea{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;border-radius:10px;padding:4px}
+.varea{flex:1 0 auto;min-width:0;display:flex;flex-direction:column;align-items:center;border-radius:10px;padding:4px}
 .varea.insel{outline:2px solid var(--ink)}
 .vcols{display:flex;gap:3px;width:100%}
-.vcol{display:flex;flex-direction:column;gap:3px;flex:1 1 0;min-width:18px;max-width:34px}
+.vcol{display:flex;flex-direction:column;gap:3px;flex:1 0 26px;min-width:26px;max-width:34px}
 .vcol.hi{outline:2px solid #ff9500;border-radius:4px}
 .vlab{height:30px;border-radius:5px;font-size:12px;font-weight:900;color:#222;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
 .vlab small{font-size:9px}
 .vcol .ic{height:34px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:0;line-height:1}
 .vcol .ic b{font-size:15px;color:#222}.vcol .ic small{font-size:9px;color:#333}
-.vname{margin-top:6px;text-align:center;font-size:15px}
+.vname{margin-top:6px;text-align:center;font-size:15px;white-space:nowrap}
 .maplegend{align-items:center;display:flex;gap:14px;font-size:13px;color:var(--ink2);margin:8px 2px}
 .maplegend .lg{display:inline-block;width:14px;height:14px;border-radius:4px;vertical-align:-2px;margin-right:4px}
 .maplegend .lg.today{border:2px solid var(--stamp)}
@@ -1717,8 +1719,9 @@ body.camOn{overflow:hidden}
   }
   function drawSlotV(sid, S, cell, si, cap){
     const areas=slotAreas(sid,S,cell,cap);
+    const addBtn=pos=>'<button type="button" class="vadd" data-addsub="'+pos+'" aria-label="'+(pos===0?'在最左邊加一區':'在最右邊加一區')+'"><b>＋</b><span>加<br>一<br>區</span></button>';
     if(!view3d){   // 平面
-      let h='<div class="vmap">';
+      let h='<div class="vmap">'+addBtn(0);
       areas.forEach((A,ai)=>{
         if(ai) h+='<div class="vaisle"><span>通<br>路</span></div>';
         h+='<div class="varea'+(si===A.i?' insel':'')+'"'+(si===A.i?' id="inSel"':'')+'><div class="vcols">';
@@ -1736,7 +1739,7 @@ body.camOn{overflow:hidden}
         });
         h+='</div><div class="vname"><b>'+esc(A.sub.n||'')+'</b> '+(layout.anySize?'':esc((A.sub.s||[]).length>2?A.sub.s[0]+'〜':(A.sub.s||[]).join('・')))+'<br><span class="meta">'+A.M.length+' 箱</span></div></div>';
       });
-      return h+'</div>';
+      return h+addBtn(S.length)+'</div>';
     }
     // 3D
     const U=4, GX=.7, DY=4.6, LH=8, AW=9, H=2.4, KX=-0.18, KY=0.78, HS=STK()>1?Math.min(2.4,4.2/STK()):H;
@@ -1781,7 +1784,7 @@ body.camOn{overflow:hidden}
     const c=[P(-1.5,-1,0),P(XW+1.5,-1,0),P(XW+1.5,YD+7+EX,0),P(-1.5,YD+7+EX,0),P(0,LH,Math.max(H,HS*STK())+1)];
     const minX=Math.min(...c.map(p=>p[0]))-1, maxX=Math.max(...c.map(p=>p[0]))+1, minY=Math.min(...c.map(p=>p[1]))-1, maxY=Math.max(...c.map(p=>p[1]))+1;
     const ncol=areas.reduce((a,A)=>a+A.cols.length,0);
-    return '<div class="w3d" style="background:none"><svg class="lane3d" style="min-width:'+(ncol>10?ncol*24:0)+'px;max-width:'+Math.max(320,ncol*70+120)+'px;margin:0 auto" viewBox="'+minX.toFixed(1)+' '+minY.toFixed(1)+' '+(maxX-minX).toFixed(1)+' '+(maxY-minY).toFixed(1)+'" role="img" aria-label="格子內部 3D 圖">'+out+'</svg></div>';
+    return '<div class="row" style="justify-content:space-between;margin:0 4px 4px"><button type="button" class="donebtn" data-addsub="0">＋ 左邊加一區</button><button type="button" class="donebtn" data-addsub="'+S.length+'">右邊加一區 ＋</button></div><div class="w3d" style="background:none"><svg class="lane3d" style="min-width:'+(ncol>10?ncol*24:0)+'px;max-width:'+Math.max(320,ncol*70+120)+'px;margin:0 auto" viewBox="'+minX.toFixed(1)+' '+minY.toFixed(1)+' '+(maxX-minX).toFixed(1)+' '+(maxY-minY).toFixed(1)+'" role="img" aria-label="格子內部 3D 圖">'+out+'</svg></div>';
   }
   const setView=v=>{ view3d=v; try{ localStorage.setItem('slipV3d',v?'1':'0'); }catch(_){} $('v3d').setAttribute('aria-pressed',v); $('v2d').setAttribute('aria-pressed',!v); renderMap(); };
   // 那一列的 15 格，找到的那一格標出來
@@ -1854,7 +1857,7 @@ body.camOn{overflow:hidden}
     if(mapEdit) h+='<div class="row" style="gap:8px;margin:10px 0;flex-wrap:wrap"><button class="donebtn" id="addRowBtn">＋ 這張地圖加一排</button><button class="donebtn" id="addMapBtn">＋ 新增地圖</button><button class="donebtn" id="renMapBtn">✏️ 地圖改名</button></div>';
     if(mapEdit){
       h+='<div class="wh"><div class="whlbl" style="margin-top:12px">格子裡的小格（依尺寸）</div><div class="whedit">'+
-        S.map((x,i)=>'<label class="ledit"><input data-subn="'+i+'" value="'+esc(x.n)+'" style="flex:0 0 4.5em" placeholder="名稱"><input data-subs="'+i+'" value="'+esc((x.s||[]).join(', '))+'" placeholder="尺寸，例：100, 120"></label>').join('')+
+        S.map((x,i)=>'<label class="ledit"><input data-subn="'+i+'" value="'+esc(x.n)+'" style="flex:0 0 4.5em" placeholder="名稱"><input data-subs="'+i+'" value="'+esc((x.s||[]).join(', '))+'" placeholder="尺寸，例：100, 120"><button type="button" class="donebtn" data-submv="'+i+'|-1" aria-label="往左移"'+(i?'':' disabled')+'>◀</button><button type="button" class="donebtn" data-submv="'+i+'|1" aria-label="往右移"'+(i<S.length-1?'':' disabled')+'>▶</button></label>').join('')+
         '<label class="ledit"><span>小格排列</span><select id="subDir" style="flex:1;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--card);font-size:16px;color:var(--ink)"><option value="v"'+(layout.subDir!=='h'?' selected':'')+'>直的（左右並排）</option><option value="h"'+(layout.subDir==='h'?' selected':'')+'>橫的（上下疊）</option></select></label>'+
         '<label class="ledit"><span>每排最多</span><input id="mrIn" type="number" min="0" value="'+MAXR()+'" style="flex:0 0 5em"><span style="width:auto">列（滿了放隔壁排，0＝不限）</span></label>'+
         '<label class="ledit"><span>每列可放</span><input id="capIn" type="number" min="1" value="'+CAP()+'" style="flex:0 0 5em"><span style="width:auto">格</span></label>'+
@@ -1981,7 +1984,7 @@ body.camOn{overflow:hidden}
     LIX=null; assignMissingPos(); render(); return n;
   }
   $('mapEditBtn').onclick=()=>{
-    const before=mapEdit?JSON.stringify([byColor(),dynColor(),CAP(),STK(),JSON.stringify(stkBy()),MAXR(),!!layout.anySize,layout.subs,layout.resv||'']):null;
+    const before=mapEdit?JSON.stringify([byColor(),dynColor(),CAP(),STK(),JSON.stringify(stkBy()),MAXR(),!!layout.anySize,(layout.subs||[]).map(x=>[x.n,(x.s||[]).join(',')]),WD_ORDER.map(RESV).join(',')]):null;
     let lanes0=null;
     if(mapEdit){ lanes0=new Map(); for(const d in days) days[d].items.forEach(it=>{ if(!gone(d,it)) lanes0.set(it.id, laneOnly(d,it.size,it.loc)); }); }
     if(mapEdit){
@@ -1993,7 +1996,7 @@ body.camOn{overflow:hidden}
       saveLayout();
       { let nmv=0; withBulk(()=>{ for(const d in days) days[d].items.forEach(it=>{ if(!lanes0.has(it.id)) return; if(laneOnly(d,it.size,it.loc)!==lanes0.get(it.id)){ placeItem(d,it); putItem(d,it); nmv++; } }); }); LIX=null; if(nmv) say('位置配置已儲存（'+nmv+' 箱換了格子，已重新排）','ok'); else say('位置配置已儲存','ok'); }
       render();
-      if(before!==JSON.stringify([byColor(),dynColor(),CAP(),STK(),JSON.stringify(stkBy()),MAXR(),!!layout.anySize,layout.subs,layout.resv||''])){
+      if(before!==JSON.stringify([byColor(),dynColor(),CAP(),STK(),JSON.stringify(stkBy()),MAXR(),!!layout.anySize,(layout.subs||[]).map(x=>[x.n,(x.s||[]).join(',')]),WD_ORDER.map(RESV).join(',')])){
         const n=stockItems().length;
         if(n && confirm('排列規則改了。\n要把目前在庫的 '+n+' 箱照新規則重新排位置嗎？\n（現場的貨也要照新位置擺）')){ replaceAll(); say('已依新規則重新排好 '+n+' 箱','ok'); }
       }
@@ -2009,9 +2012,36 @@ body.camOn{overflow:hidden}
   const pickSlot=e=>{ const b=e.target.closest('[data-slot]'); if(!b||mapEdit) return false; cellHi=null; mapSel = mapSel===b.dataset.slot ? null : b.dataset.slot; renderMap(); if(mapSel) $('mapCell').scrollIntoView({block:'nearest',behavior:'smooth'}); return true; };
   const readLay=()=>document.querySelectorAll('[data-lay]').forEach(t=>{ const [r,c]=t.dataset.lay.split('-').map(Number);
       layout.rows[r][c]=t.value.split(/[\s,，、]+/).map(x=>x.trim()).filter(Boolean).map(x=>{ const m=x.match(/(\d{1,2})[\/月.\-](\d{1,2})/); return m?pad(+m[1])+'-'+pad(+m[2]):null; }).filter(Boolean); });
+  // 區（左／中／右）換順序：已放的貨跟著區走，不會跑掉
+  // 區（左／中／右）換順序或新增：已放的貨跟著原本的區走，不會跑掉
+  function remapSubs(change, fn){
+    const homes=new Map(); for(const d in days) days[d].items.forEach(it=>{ if(!it.loc) homes.set(it.id, placeOf(d,it.size,'')); });
+    const fix=v=>{ const m=String(v||'').match(/^(o:)?(\d+-\d+-)(\d+)$/); return m?(m[1]||'')+m[2]+fn(+m[3]):v; };
+    change();
+    slotCache.clear(); LIX=null;
+    withBulk(()=>{ for(const d in days) days[d].items.forEach(it=>{
+      if(it.loc){ const n=fix(it.loc), o=fix(it.oh); if(n!==it.loc||o!==it.oh){ it.loc=n; it.oh=o||''; putItem(d,it); } return; }
+      const H=homes.get(it.id); if(!H||H.free!=null||H.i<0) return; const ni=fn(H.i), now=placeOf(d,it.size,'');
+      if(now && now.i!==ni){ it.loc='o:'+H.r+'-'+H.c+'-'+ni; it.oh=now.key; putItem(d,it); } }); });
+    stickyLoc=fix(stickyLoc); try{ localStorage.setItem('slipSticky',stickyLoc); }catch(_){} if(stickySub>=0){ stickySub=fn(stickySub); saveSR(); }
+    saveLayout(); LIX=null; render(); renderSticky();
+  }
+  function moveSub(a,b){
+    const S=layout.subs||[]; if(b<0||b>=S.length) return;
+    readLay(); document.querySelectorAll('[data-subn]').forEach(t=>{ const i=+t.dataset.subn, x=S[i]; if(!x) return; x.n=t.value.trim()||x.n; const ss=(document.querySelector('[data-subs="'+i+'"]')||{}).value; if(ss!=null) x.s=ss.split(/[\s,，、]+/).map(v=>v.trim()).filter(Boolean); });
+    remapSubs(()=>{ [S[a],S[b]]=[S[b],S[a]]; }, i=>i===a?b:i===b?a:i);
+    say('已把「'+S[b].n+'」移到'+(b<a?'左':'右')+'邊','ok');
+  }
+  function insertSub(pos){
+    const S=layout.subs||(layout.subs=[]); const nm=(prompt('新的區叫什麼名字？（會加在'+(pos===0?'最左邊':'最右邊')+'）', pos===0?'左2':'右2')||'').trim(); if(!nm) return;
+    if(S.some(x=>x.n===nm)){ say('已經有「'+nm+'」了','warn'); return; }
+    remapSubs(()=>{ S.splice(pos,0,{n:nm,s:[]}); }, i=>i>=pos?i+1:i);
+    say('已在'+(pos===0?'最左邊':'最右邊')+'加了「'+nm+'」','ok');
+  }
   const fixRmap=()=>{ layout.rmap=layout.rows.map((_,r)=>rmapOf(r)); if(!layout.names) layout.names=[]; };
   $('map').onclick=e=>{
     const mb=e.target.closest('[data-map]'); if(mb){ if(mapEdit) readLay(); setMap(mb.dataset.map); mapSel=null; renderMap(); return; }
+    const mv=e.target.closest('[data-submv]'); if(mv){ const [a,d]=mv.dataset.submv.split('|').map(Number); moveSub(a,a+d); return; }
     if(e.target.closest('#addRowBtn')){ readLay(); fixRmap(); const m=theMap(), VR=visRows(), cols=VR.length?layout.rows[VR[0]].length:7;
       const nm=prompt('新的一排叫什麼名字？', '第'+(VR.length+1)+'排'); if(nm===null) return;
       layout.rows.push(Array.from({length:cols},()=>[])); layout.names.push(nm.trim()||('第'+(VR.length+1)+'排')); layout.rmap.push(m); renderMap(); say('已加一排，輸入每格的出貨日後按「✏️ 編輯位置」存好','ok'); return; }
@@ -2034,7 +2064,7 @@ body.camOn{overflow:hidden}
       }); return; }
     if(pickSlot(e)) return;
   });
-  $('mapCell').addEventListener('click',e=>{ const c=e.target.closest('[data-cell]'); if(!c) return; e.stopImmediatePropagation(); const i=c.dataset.cell.indexOf('|'); cellHi=c.dataset.cell.slice(i+1); renderMap(); setTimeout(()=>{ const k=$('cellCard'); if(k) k.scrollIntoView({block:'nearest',behavior:'smooth'}); },50); }, true);
+  $('mapCell').addEventListener('click',e=>{ const ad=e.target.closest('[data-addsub]'); if(ad){ e.stopImmediatePropagation(); insertSub(+ad.dataset.addsub); return; } const c=e.target.closest('[data-cell]'); if(!c) return; e.stopImmediatePropagation(); const i=c.dataset.cell.indexOf('|'); cellHi=c.dataset.cell.slice(i+1); renderMap(); setTimeout(()=>{ const k=$('cellCard'); if(k) k.scrollIntoView({block:'nearest',behavior:'smooth'}); },50); }, true);
   $('mapCell').onclick=e=>{
     const cp=e.target.closest('[data-compact]'); if(cp){ const i=cp.dataset.compact.lastIndexOf('|'); const n=compactRow({lane:cp.dataset.compact.slice(0,i), row:+cp.dataset.compact.slice(i+1)}, true); render(); say(n?'已重新排號':'順序已經是連續的','ok'); return; }
     if(pickSlot(e)) return;
