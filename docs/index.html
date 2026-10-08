@@ -1223,18 +1223,20 @@ body.camOn{overflow:hidden}
     if(loc===undefined) loc=stickyLoc;
     const hits=findCode(code), same=hits.find(h=>h.date===date);
     if(same){
-      if(stickyRow>0 || (explicit && (same.item.size!==size || (order && same.item.order!==order) || (loc && same.item.loc!==loc)))){
+      // 重掃：有指定列・格，或「指定位置」跟現在放的不一樣 → 搬到新位置
+      if(stickyRow>0 || (loc && same.item.loc!==loc) || (explicit && (same.item.size!==size || (order && same.item.order!==order)))){
         const it=same.item, ok0=laneKey(date,it.size,it.loc,it.order), sp0=spotOf(date,it);
         if(explicit){ it.size=size; if(order) it.order=order; } if(loc) it.loc=loc;
         if(stickyRow>0) reSticky(date,it,sp0);   // 重掃＝照現在指定的列・格重新放
-        else fixPos(date,it,ok0);
+        else { fixPos(date,it,ok0); if(sp0.row!==it.row || sp0.lane!==laneOnly(date,it.size,it.loc)) compactRow(sp0); }
         freshId=it.id; putItem(date,it); say('已更新 '+fmtCode(code)+' → '+locText(date,it.size,it.loc,it,it.order),'ok'); doneToast('✓ 已更新', code, date, it.size); render(); return;
         say('已更新 '+fmtCode(code)+' → '+sizeLbl(size),'ok'); doneToast('✓ 已更新', code, date, size); render(); putItem(date,same.item);
       } else { say('「'+fmtCode(code)+'」在 '+md(date)+' 已經登記過了','warn'); camToast('已經登記過', esc(fmtCode(code))+'<br>'+md(date), true); buzz([60,60,60]); }
       return;
     }
     if(hits.length){
-      if(!explicit && stickyRow>0){ const h=hits[0], it=h.item, sp0=spotOf(h.date,it); if(loc) it.loc=loc; reSticky(h.date,it,sp0); freshId=it.id; putItem(h.date,it); say('已更新 '+fmtCode(code)+' → '+locText(h.date,it.size,it.loc,it,it.order),'ok'); doneToast('✓ 已更新', code, h.date, it.size); render(); return; }
+      if(!explicit && (stickyRow>0 || (loc && hits[0].item.loc!==loc))){ const h=hits[0], it=h.item, sp0=spotOf(h.date,it), ok0=laneKey(h.date,it.size,it.loc,it.order); if(loc) it.loc=loc;
+        if(stickyRow>0) reSticky(h.date,it,sp0); else { fixPos(h.date,it,ok0); if(sp0.row!==it.row || sp0.lane!==laneOnly(h.date,it.size,it.loc)) compactRow(sp0); } freshId=it.id; putItem(h.date,it); say('已更新 '+fmtCode(code)+' → '+locText(h.date,it.size,it.loc,it,it.order),'ok'); doneToast('✓ 已更新', code, h.date, it.size); render(); return; }
       if(!explicit){ say('「'+fmtCode(code)+'」已登記在 '+hits.map(h=>md(h.date)).join('、')+'，沒有變更','warn'); camToast('已登記在 '+md(hits[0].date), esc(fmtCode(code))+'<br>沒有變更', true); buzz([60,60,60]); return; }
       const h=hits[0], it=h.item, from=h.date;
       days[from].items=days[from].items.filter(i=>i!==it); if(!days[from].items.length) delete days[from];
