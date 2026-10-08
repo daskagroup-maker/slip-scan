@@ -274,6 +274,8 @@ form.manual.big button{font-size:20px;padding:0 22px}
 .daytot{display:flex;flex-wrap:wrap;gap:4px;margin:4px 8px 6px}
 .daytot span{display:flex;align-items:baseline;gap:3px;background:#e8eef6;border-radius:6px;padding:2px 7px;font-size:12px}
 .daytot span b{font-size:15px;margin-left:3px}
+.daytot span{cursor:pointer}
+.daytot span.on{background:var(--ink);color:var(--paper)}
 .daytot span.t{background:#fde3e1;color:#c8372d}
 .t3c{font-weight:900;fill:#1d2a44}
 .t3n{font-size:5px;font-weight:900;text-anchor:middle;fill:#1d2a44;paint-order:stroke;stroke:#fff;stroke-width:1.2px}
@@ -706,7 +708,7 @@ body.camOn{overflow:hidden}
   </section>
 
   <div class="foot">
-    <span id="syncState">連線中…</span>
+    <span><span id="syncState">連線中…</span> <small id="appVer" style="opacity:.6;margin-left:6px">版本 v91</small></span>
     <span class="row" style="flex-wrap:wrap;justify-content:flex-end"><button id="install" hidden>安裝到手機</button><button id="csv">匯出 CSV</button><button id="wipe" style="color:var(--stamp);border-color:var(--stamp)">🗑 清除資料</button></span>
   </div>
   <div class="foot">
@@ -1682,7 +1684,7 @@ body.camOn{overflow:hidden}
         const tp=P(x+W/2,y+D/2,h);
         if(L.length) labels+=(isToday?'<text x="'+tp[0].toFixed(1)+'" y="'+(tp[1]-3).toFixed(1)+'" class="t3t">今天</text>':'');
         const fp=P(x+W/2, y+D+1.4, 0);
-        labels+='<text x="'+fp[0].toFixed(1)+'" y="'+(fp[1]+2).toFixed(1)+'" class="t3d"><tspan class="t3no">'+(c+1)+'</tspan>'+keys.map((k,j)=>'<tspan x="'+fp[0].toFixed(1)+'" dy="'+(j?3.1:3.4)+'"'+(L.some(q=>q.date.slice(5)===k)?' class="on"':'')+'>'+mdk(k)+(()=>{ const n=L.filter(q=>q.date.slice(5)===k).length; return n?' <tspan class="t3c">'+n+'箱</tspan>':''; })()+'</tspan>').join('')+'</text>';
+        labels+='<text x="'+fp[0].toFixed(1)+'" y="'+(fp[1]+2).toFixed(1)+'" class="t3d"><tspan class="t3no">'+(c+1)+'</tspan>'+[...keys, ...[...new Set(L.map(q=>q.date.slice(5)))].filter(k=>!keys.includes(k)).sort()].map((k,j)=>'<tspan x="'+fp[0].toFixed(1)+'" dy="'+(j?3.1:3.4)+'"'+(L.some(q=>q.date.slice(5)===k)?' class="on"':'')+'>'+(keys.includes(k)?'':'＋')+mdk(k)+(()=>{ const n=L.filter(q=>q.date.slice(5)===k).length; return n?' <tspan class="t3c">'+n+'箱</tspan>':''; })()+'</tspan>').join('')+'</text>';
       });
       out+=labels;
     });
@@ -1690,9 +1692,9 @@ body.camOn{overflow:hidden}
     const minX=Math.min(...corners.map(p=>p[0]))-13, maxX=Math.max(...corners.map(p=>p[0]))+2, minY=Math.min(...corners.map(p=>p[1]))-2, maxY=Math.max(...corners.map(p=>p[1]))+3;
     const byD={}; VR.forEach(r=>layout.rows[r].forEach((k,c)=>(cell[r+'-'+c]||[]).forEach(q=>{ byD[q.date]=(byD[q.date]||0)+1; })));
     const ds=Object.keys(byD).sort();
-    return '<div class="daytot">'+(ds.length?ds.map(d=>'<span'+(d===TODAY?' class="t"':'')+'>'+md(d)+'<b>'+byD[d]+'</b>箱</span>').join(''):'<span>沒有在庫的貨</span>')+'</div>'+
+    return '<div class="daytot">'+(ds.length?ds.map(d=>'<span data-day="'+d+'" class="'+(d===TODAY?'t':'')+(mapFilter==='d:'+d?' on':'')+'" role="button">'+md(d)+'<b>'+byD[d]+'</b>箱</span>').join(''):'<span>沒有在庫的貨</span>')+'</div>'+
       '<div class="w3d"><svg viewBox="'+minX.toFixed(1)+' '+minY.toFixed(1)+' '+(maxX-minX).toFixed(1)+' '+(maxY-minY).toFixed(1)+'" role="img" aria-label="倉庫 3D 圖">'+out+rowLab+'</svg></div>'+
-      '<p class="meta" style="margin:4px 8px">上面＝每一天有幾箱，<b style="color:#e08600">橘色</b>＝要找的貨在這一格。點一格看裡面怎麼擺。</p>';
+      '<p class="meta" style="margin:4px 8px">上面＝每一天有幾箱（點一下只看那天的貨在哪），<b style="color:#e08600">橘色</b>＝要找的貨在這一格。點一格看裡面怎麼擺。</p>';
   }
   /* 格子內部 3D：一列 15 個小箱子，第 1 列在最裡面（最上面），往前排 */
   function draw3DLane(byR, order, cap){
@@ -1875,7 +1877,7 @@ body.camOn{overflow:hidden}
       row.forEach((keys,c)=>{
         const id=r+'-'+c, L=cell[id]||[];
         if(mapEdit){ h+='<label class="ledit"><span>'+esc((layout.names&&layout.names[r])||'')+' '+(c+1)+' 號</span><input data-lay="'+id+'" value="'+keys.map(mdk).join(', ')+'" placeholder="例：1/27, 2/13" inputmode="text"></label>'; return; }
-        const dl=keys.map(k=>{ const n=L.filter(x=>x.date.slice(5)===k).length; return '<span class="'+(n?'on':'')+'">'+mdk(k)+(n?' <b>'+n+'</b>':'')+'</span>'; }).join('');
+        const dl=[...keys, ...[...new Set(L.map(x=>x.date.slice(5)))].filter(k=>!keys.includes(k)).sort()].map(k=>{ const n=L.filter(x=>x.date.slice(5)===k).length; return '<span class="'+(n?'on':'')+'">'+(keys.includes(k)?'':'＋')+mdk(k)+(n?' <b>'+n+'</b>':'')+'</span>'; }).join('');   // 指定／移位置放進來的別天的貨也列出來（前面加＋）
         const isFound=(findHi&&L.some(x=>x.it.id===findHi))||(focus&&L.length);
         // 顏色組成條
         const cw={}; L.forEach(x=>{ const w=wdOf(x.it.order); cw[w]=(cw[w]||0)+1; });
@@ -2094,6 +2096,7 @@ body.camOn{overflow:hidden}
   }
   const fixRmap=()=>{ layout.rmap=layout.rows.map((_,r)=>rmapOf(r)); if(!layout.names) layout.names=[]; };
   $('map').onclick=e=>{
+    const dy=e.target.closest('[data-day]'); if(dy){ const d=dy.dataset.day; mapFilter = mapFilter==='d:'+d ? 'all' : 'd:'+d; mapSel=null; ['mfAll','mfToday','mfTmr'].forEach(x=>$(x).setAttribute('aria-pressed', x==='mfAll'&&mapFilter==='all')); renderMap(); return; }   // 點日期：只看那天的貨在哪
     const mb=e.target.closest('[data-map]'); if(mb){ if(mapEdit) readLay(); setMap(mb.dataset.map); mapSel=null; renderMap(); return; }
     const mv=e.target.closest('[data-submv]'); if(mv){ const [a,d]=mv.dataset.submv.split('|').map(Number); moveSub(a,a+d); return; }
     const dr=e.target.closest('[data-delrow]'); if(dr){ delRows([+dr.dataset.delrow]); return; }
