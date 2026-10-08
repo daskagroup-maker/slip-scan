@@ -85,6 +85,8 @@ input[type=date],input[type=month]{flex:1;min-width:0;padding:8px 10px;border:1p
 .scanbtn.look{background:var(--ink);color:var(--paper)}
 .scanbtn svg{width:26px;height:26px}
 .alt{display:flex;gap:8px;margin-top:8px}
+td.mdone,th.mdone{color:var(--ink2);font-weight:700}
+td.min,th.min{color:#1f7a3a;font-weight:900}
 .maptabs{display:flex;gap:6px;flex-wrap:wrap;margin:4px 6px 8px}
 .maptabs button{padding:8px 14px;border:1px solid var(--line);border-radius:999px;background:var(--card);font-size:15px;color:var(--ink)}
 .maptabs button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
@@ -1858,7 +1860,7 @@ body.camOn{overflow:hidden}
     const S=layout.subs||[];
     let h='<div class="wh">'; const VR=visRows();
     layout.rows.forEach((row,r)=>{ if(!VR.includes(r)) return;
-      h+='<div class="whlbl">'+esc((layout.names&&layout.names[r])||('第'+(r+1)+'排'))+(mapEdit?'':'　<span style="opacity:.8">點格子看裡面怎麼擺</span>')+'</div><div class="'+(mapEdit?'whedit':'whrow')+'" style="grid-template-columns:repeat('+row.length+',minmax(112px,1fr))">';
+      h+='<div class="whlbl">'+esc((layout.names&&layout.names[r])||('第'+(r+1)+'排'))+(mapEdit?' <button type="button" class="linkbtn" data-delrow="'+r+'" style="color:var(--stamp);margin-left:8px">🗑 刪除這一排</button>':'　<span style="opacity:.8">點格子看裡面怎麼擺</span>')+'</div><div class="'+(mapEdit?'whedit':'whrow')+'" style="grid-template-columns:repeat('+row.length+',minmax(112px,1fr))">';
       row.forEach((keys,c)=>{
         const id=r+'-'+c, L=cell[id]||[];
         if(mapEdit){ h+='<label class="ledit"><span>'+esc((layout.names&&layout.names[r])||'')+' '+(c+1)+' 號</span><input data-lay="'+id+'" value="'+keys.map(mdk).join(', ')+'" placeholder="例：1/27, 2/13" inputmode="text"></label>'; return; }
@@ -1876,7 +1878,7 @@ body.camOn{overflow:hidden}
       h+='</div>'; if(r!==VR[VR.length-1] && !mapEdit) h+='<div class="aisle">通道</div>';
     });
     h+='</div>';
-    if(mapEdit) h+='<div class="row" style="gap:8px;margin:10px 0;flex-wrap:wrap"><button class="donebtn" id="addRowBtn">＋ 這張地圖加一排</button><button class="donebtn" id="addMapBtn">＋ 新增地圖</button><button class="donebtn" id="renMapBtn">✏️ 地圖改名</button></div>';
+    if(mapEdit) h+='<div class="row" style="gap:8px;margin:10px 0;flex-wrap:wrap"><button class="donebtn" id="addRowBtn">＋ 這張地圖加一排</button><button class="donebtn" id="addMapBtn">＋ 新增地圖</button><button class="donebtn" id="renMapBtn">✏️ 地圖改名</button>'+(mapList().length>1?'<button class="donebtn" id="delMapBtn" style="color:var(--stamp);border-color:var(--stamp)">🗑 刪除這張地圖</button>':'')+'</div>';
     if(mapEdit){
       h+='<div class="wh"><div class="whlbl" style="margin-top:12px">格子裡的小格（依尺寸）</div><div class="whedit">'+
         S.map((x,i)=>'<label class="ledit"><input data-subn="'+i+'" value="'+esc(x.n)+'" style="flex:0 0 4.5em" placeholder="名稱"><input data-subs="'+i+'" value="'+esc((x.s||[]).join(', '))+'" placeholder="尺寸，例：100, 120"><button type="button" class="donebtn" data-submv="'+i+'|-1" aria-label="往左移"'+(i?'':' disabled')+'>◀</button><button type="button" class="donebtn" data-submv="'+i+'|1" aria-label="往右移"'+(i<S.length-1?'':' disabled')+'>▶</button></label>').join('')+
@@ -2048,6 +2050,25 @@ body.camOn{overflow:hidden}
     stickyLoc=fix(stickyLoc); try{ localStorage.setItem('slipSticky',stickyLoc); }catch(_){} if(stickySub>=0){ stickySub=fn(stickySub); saveSR(); }
     saveLayout(); LIX=null; render(); renderSticky();
   }
+  // 刪除排（或整張地圖）：放在那裡的貨會變成「未分配位置」，其他排的貨不受影響
+  function delRows(list, mapName){
+    readLay(); fixRmap(); list=[...new Set(list)].sort((a,b)=>a-b); if(!list.length) return;
+    if(layout.rows.length-list.length<1){ say('至少要留一排','warn'); return; }
+    const del=new Set(list), dates=new Set(); list.forEach(r=>layout.rows[r].forEach(k=>(k||[]).forEach(x=>dates.add(x))));
+    let n=0; for(const d in days) days[d].items.forEach(it=>{ if(gone(d,it)) return; const P=placeOf(d,it.size,it.loc); if(P&&P.free==null&&del.has(P.r)) n++; });
+    const what = mapName ? '地圖「'+mapName+'」（'+list.length+' 排）' : '「'+((layout.names&&layout.names[list[0]])||('第'+(list[0]+1)+'排'))+'」';
+    if(!confirm('刪除'+what+'？'+(n?'\n這裡現在有 '+n+' 箱貨，刪除後會變成「未分配位置」，要再移到別的格子。':'')+(dates.size?'\n這些出貨日也會沒有格子：'+[...dates].map(mdk).join('、'):''))) return;
+    const nr=r=>{ let k=0; for(const x of list) if(x<r) k++; return r-k; };
+    const fix=v=>{ const m=String(v||'').match(/^(o:)?(\d+)-(\d+)-(-?\d+)$/); if(!m) return v; return del.has(+m[2]) ? null : (m[1]||'')+nr(+m[2])+'-'+m[3]+'-'+m[4]; };
+    withBulk(()=>{ for(const d in days) days[d].items.forEach(it=>{
+      if(!it.loc){ const P=placeOf(d,it.size,''); if(P&&P.free==null&&del.has(P.r)&&it.row){ it.row=0; it.idx=0; putItem(d,it); } return; }
+      const a=it.loc?fix(it.loc):it.loc, o=it.oh?fix(it.oh):it.oh;
+      if(a!==it.loc || o!==it.oh){ it.loc=a||''; it.oh=o||''; if(a===null){ it.row=0; it.idx=0; } putItem(d,it); } }); });
+    layout.rows=layout.rows.filter((_,r)=>!del.has(r)); layout.names=(layout.names||[]).filter((_,r)=>!del.has(r)); layout.rmap=layout.rmap.filter((_,r)=>!del.has(r));
+    if(stickyLoc){ const v=fix(stickyLoc); stickyLoc=v||''; try{ localStorage.setItem('slipSticky',stickyLoc); }catch(_){} }
+    if(mapName) setMap(mapList()[0]);
+    saveLayout(); LIX=null; mapSel=null; render(); renderSticky(); say('已刪除'+what+(n?'，'+n+' 箱變成未分配位置':''),'ok');
+  }
   function moveSub(a,b){
     const S=layout.subs||[]; if(b<0||b>=S.length) return;
     readLay(); document.querySelectorAll('[data-subn]').forEach(t=>{ const i=+t.dataset.subn, x=S[i]; if(!x) return; x.n=t.value.trim()||x.n; const ss=(document.querySelector('[data-subs="'+i+'"]')||{}).value; if(ss!=null) x.s=ss.split(/[\s,，、]+/).map(v=>v.trim()).filter(Boolean); });
@@ -2064,6 +2085,8 @@ body.camOn{overflow:hidden}
   $('map').onclick=e=>{
     const mb=e.target.closest('[data-map]'); if(mb){ if(mapEdit) readLay(); setMap(mb.dataset.map); mapSel=null; renderMap(); return; }
     const mv=e.target.closest('[data-submv]'); if(mv){ const [a,d]=mv.dataset.submv.split('|').map(Number); moveSub(a,a+d); return; }
+    const dr=e.target.closest('[data-delrow]'); if(dr){ delRows([+dr.dataset.delrow]); return; }
+    if(e.target.closest('#delMapBtn')){ const m=theMap(); delRows(visRows(), m); return; }
     if(e.target.closest('#addRowBtn')){ readLay(); fixRmap(); const m=theMap(), VR=visRows(), cols=VR.length?layout.rows[VR[0]].length:7;
       const nm=prompt('新的一排叫什麼名字？', '第'+(VR.length+1)+'排'); if(nm===null) return;
       layout.rows.push(Array.from({length:cols},()=>[])); layout.names.push(nm.trim()||('第'+(VR.length+1)+'排')); layout.rmap.push(m); renderMap(); say('已加一排，輸入每格的出貨日後按「✏️ 編輯位置」存好','ok'); return; }
@@ -2147,17 +2170,18 @@ body.camOn{overflow:hidden}
     const used=new Set(); dates.forEach(d=>days[d].items.forEach(i=>used.add(i.size||'')));
     const cols=[...sizes.filter(s=>used.has(s)), ...[...used].filter(k=>!sizes.includes(k))];
     if(!dates.length){ $('board').innerHTML='<div class="empty"><b>'+y+'年'+m+'月 沒有紀錄</b></div>'; $('cell').innerHTML=''; return; }
-    const tot={}; let all=0;
-    let h='<table><thead><tr><th style="text-align:left;padding-left:10px">出貨日</th>'+cols.map(c=>'<th class="szh" style="--c:'+sizeColor(c)+'">'+esc(sizeLbl(c))+'</th>').join('')+'<th>合計</th></tr></thead><tbody>';
+    const tot={}; let all=0, allDone=0, allIn=0;
+    let h='<table><thead><tr><th style="text-align:left;padding-left:10px">出貨日</th>'+cols.map(c=>'<th class="szh" style="--c:'+sizeColor(c)+'">'+esc(sizeLbl(c))+'</th>').join('')+'<th>合計</th><th class="mdone">拿走</th><th class="min">在庫</th></tr></thead><tbody>';
     dates.forEach(d=>{
       const cnt=sizeCounts(days[d].items); const n=days[d].items.length; all+=n;
+      const nd=days[d].items.filter(i=>i.done).length, ni=days[d].items.filter(i=>!gone(d,i)).length; allDone+=nd; allIn+=ni;
       const cls=[d<TODAY?'past':'', d===TODAY?'today':'', cellSel&&cellSel.date===d?'sel':''].join(' ');
       h+='<tr class="'+cls+'"><td class="d">'+md(d)+(d===TODAY?'<small>今天</small>':'')+'</td>'+cols.map(c=>{
         tot[c]=(tot[c]||0)+(cnt[c]||0);
         return cnt[c] ? '<td><button data-cell="'+d+'|'+esc(c)+'" style="--c:'+sizeColor(c)+'">'+cnt[c]+'</button></td>' : '<td class="z">·</td>';
-      }).join('')+'<td><button data-cell="'+d+'|*" style="--c:var(--ink)">'+n+'</button></td></tr>';
+      }).join('')+'<td><button data-cell="'+d+'|*" style="--c:var(--ink)">'+n+'</button></td><td class="mdone">'+(nd||'·')+'</td><td class="min">'+(ni||'·')+'</td></tr>';
     });
-    h+='</tbody><tfoot><tr><td class="d">合計</td>'+cols.map(c=>'<td style="color:'+sizeColor(c)+'">'+tot[c]+'</td>').join('')+'<td>'+all+'</td></tr></tfoot></table>';
+    h+='</tbody><tfoot><tr><td class="d">合計</td>'+cols.map(c=>'<td style="color:'+sizeColor(c)+'">'+tot[c]+'</td>').join('')+'<td>'+all+'</td><td class="mdone">'+allDone+'</td><td class="min">'+allIn+'</td></tr></tfoot></table><p class="meta">合計＝這天登記的全部箱數，拿走＝按過「出貨了／拿走」，在庫＝還在倉庫（出貨日過了也不算在庫）。</p>';
     $('board').innerHTML=h;
     // cell list
     if(cellSel && days[cellSel.date]){
