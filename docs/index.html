@@ -275,6 +275,7 @@ form.manual.big button{font-size:20px;padding:0 22px}
 .daytot span{display:flex;align-items:baseline;gap:3px;background:#e8eef6;border-radius:6px;padding:2px 7px;font-size:12px}
 .daytot span b{font-size:15px;margin-left:3px}
 .daytot span{cursor:pointer}
+.miswarn{display:block;line-height:1.7;margin:6px 8px;padding:8px 10px;border-radius:8px;background:#fff4d6;color:#7a4b00;font-size:14px}
 .daytot span.on{background:var(--ink);color:var(--paper)}
 .daytot span.t{background:#fde3e1;color:#c8372d}
 .t3c{font-weight:900;fill:#1d2a44}
@@ -708,7 +709,7 @@ body.camOn{overflow:hidden}
   </section>
 
   <div class="foot">
-    <span><span id="syncState">連線中…</span> <small id="appVer" style="opacity:.6;margin-left:6px">版本 v92</small></span>
+    <span><span id="syncState">連線中…</span> <small id="appVer" style="opacity:.6;margin-left:6px">版本 v93</small></span>
     <span class="row" style="flex-wrap:wrap;justify-content:flex-end"><button id="install" hidden>安裝到手機</button><button id="csv">匯出 CSV</button><button id="wipe" style="color:var(--stamp);border-color:var(--stamp)">🗑 清除資料</button></span>
   </div>
   <div class="foot">
@@ -1648,6 +1649,18 @@ body.camOn{overflow:hidden}
   let mapEdit=false, findHi=null, cellHi=null;
   /* ===== 3D 倉庫圖（等角視角）：每格的貨疊成一堆，高度＝箱數，顏色＝貼紙顏色 ===== */
   let view3d=true; try{ view3d=localStorage.getItem('slipV3d')!=='0'; }catch(_){}
+  // 手動放到「不是自己出貨日的格子」的貨
+  function misplaced(){
+    const L=[]; for(const d in days) for(const it of days[d].items){ if(gone(d,it)) continue;
+      const m=String(it.loc||'').match(/^(\d+)-(\d+)-(-?\d+)$/); if(!m) continue; const s=slotOf(d); if(s && (s.r!==+m[1] || s.c!==+m[2])) L.push([d,it,s,+m[3]]); }
+    return L;
+  }
+  function fixMisplaced(){
+    const L=misplaced(); if(!L.length) return;
+    if(!confirm('把 '+L.length+' 箱移回自己出貨日的格子？\n（區照原本的，列・格會重新排）\n移完照畫面上的新位置擺放。')) return;
+    LIX=null; withBulk(()=>L.forEach(([d,it,sl,i])=>{ it.loc=sl.r+'-'+sl.c+'-'+i; it.oh=''; placeItem(d,it); putItem(d,it); }));
+    LIX=null; render(); say('已把 '+L.length+' 箱移回自己日期的格子，點上面的日期可以看在哪','ok');
+  }
   function draw3D(cell, focus){
     // 斜前方俯視（像站在倉庫門口看）：x＝左右、y＝前後（0＝最裡面）、z＝高度
     const W=10, D=9, G=2.4, A=15, KX=-0.32, KY=0.62;
@@ -1671,7 +1684,7 @@ body.camOn{overflow:hidden}
     for(let r=0;r<rowsN-1;r++){ const y1=rowY(r)+D+8.5, y2=rowY(r+1)-1.2;
       out+='<polygon points="'+pts([P(-2,y1,0),P(XW+2,y1,0),P(XW+2,y2,0),P(-2,y2,0)])+'" fill="#fafbfc"/>';
       const m=P(XW/2,(y1+y2)/2,0); out+='<text x="'+m[0].toFixed(1)+'" y="'+(m[1]+1).toFixed(1)+'" class="t3a">通　道</text>'; }
-    let labels='';
+    let labels='', allLab='';
     let rowLab='';
     VR.forEach((r,vi)=>{ const row=layout.rows[r];
       labels='';
@@ -1693,14 +1706,15 @@ body.camOn{overflow:hidden}
         const fp=P(x+W/2, y+D+1.4, 0);
         labels+='<text x="'+fp[0].toFixed(1)+'" y="'+(fp[1]+2).toFixed(1)+'" class="t3d"><tspan class="t3no">'+(c+1)+'</tspan>'+[...keys, ...[...new Set(L.map(q=>q.date.slice(5)))].filter(k=>!keys.includes(k)).sort()].map((k,j)=>'<tspan x="'+fp[0].toFixed(1)+'" dy="'+(j?3.1:3.4)+'"'+(L.some(q=>q.date.slice(5)===k)?' class="on"':'')+'>'+(keys.includes(k)?'':'＋')+mdk(k)+(()=>{ const n=L.filter(q=>q.date.slice(5)===k).length; return n?' <tspan class="t3c">'+n+'箱</tspan>':''; })()+'</tspan>').join('')+'</text>';
       });
-      out+=labels;
+      allLab+=labels;
     });
     const corners=[P(-2,-2,0),P(XW+2,-2,0),P(XW+2,YD+11,0),P(-2,YD+11,0),P(0,0,4),P(XW,0,4)];
     const minX=Math.min(...corners.map(p=>p[0]))-13, maxX=Math.max(...corners.map(p=>p[0]))+2, minY=Math.min(...corners.map(p=>p[1]))-2, maxY=Math.max(...corners.map(p=>p[1]))+3;
     const byD={}; VR.forEach(r=>layout.rows[r].forEach((k,c)=>(cell[r+'-'+c]||[]).forEach(q=>{ byD[q.date]=(byD[q.date]||0)+1; })));
     const ds=Object.keys(byD).sort();
-    return '<div class="daytot">'+(ds.length?ds.map(d=>'<span data-day="'+d+'" class="'+(d===TODAY?'t':'')+(mapFilter==='d:'+d?' on':'')+'" role="button">'+md(d)+'<b>'+byD[d]+'</b>箱</span>').join(''):'<span>沒有在庫的貨</span>')+'</div>'+
-      '<div class="w3d"><svg viewBox="'+minX.toFixed(1)+' '+minY.toFixed(1)+' '+(maxX-minX).toFixed(1)+' '+(maxY-minY).toFixed(1)+'" role="img" aria-label="倉庫 3D 圖">'+out+rowLab+'</svg></div>'+
+    const mis=misplaced();
+    return (mis.length?'<div class="miswarn">⚠ 有 <b>'+mis.length+'</b> 箱放在別天的格子（地圖上「＋」的那些）<br><button type="button" class="donebtn" data-fixmis="1">移回自己日期的格子</button></div>':'')+'<div class="daytot">'+(ds.length?ds.map(d=>'<span data-day="'+d+'" class="'+(d===TODAY?'t':'')+(mapFilter==='d:'+d?' on':'')+'" role="button">'+md(d)+'<b>'+byD[d]+'</b>箱</span>').join(''):'<span>沒有在庫的貨</span>')+'</div>'+
+      '<div class="w3d"><svg viewBox="'+minX.toFixed(1)+' '+minY.toFixed(1)+' '+(maxX-minX).toFixed(1)+' '+(maxY-minY).toFixed(1)+'" role="img" aria-label="倉庫 3D 圖">'+out+allLab+rowLab+'</svg></div>'+
       '<p class="meta" style="margin:4px 8px">上面＝每一天有幾箱（點一下只看那天的貨在哪），<b style="color:#e08600">橘色</b>＝要找的貨在這一格。點一格看裡面怎麼擺。</p>';
   }
   /* 格子內部 3D：一列 15 個小箱子，第 1 列在最裡面（最上面），往前排 */
@@ -2103,6 +2117,7 @@ body.camOn{overflow:hidden}
   }
   const fixRmap=()=>{ layout.rmap=layout.rows.map((_,r)=>rmapOf(r)); if(!layout.names) layout.names=[]; };
   $('map').onclick=e=>{
+    if(e.target.closest('[data-fixmis]')){ fixMisplaced(); return; }
     const dy=e.target.closest('[data-day]'); if(dy){ const d=dy.dataset.day; mapFilter = mapFilter==='d:'+d ? 'all' : 'd:'+d; mapSel=null; ['mfAll','mfToday','mfTmr'].forEach(x=>$(x).setAttribute('aria-pressed', x==='mfAll'&&mapFilter==='all')); renderMap(); return; }   // 點日期：只看那天的貨在哪
     const mb=e.target.closest('[data-map]'); if(mb){ if(mapEdit) readLay(); setMap(mb.dataset.map); mapSel=null; renderMap(); return; }
     const mv=e.target.closest('[data-submv]'); if(mv){ const [a,d]=mv.dataset.submv.split('|').map(Number); moveSub(a,a+d); return; }
