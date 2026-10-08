@@ -709,7 +709,7 @@ body.camOn{overflow:hidden}
   </section>
 
   <div class="foot">
-    <span><span id="syncState">連線中…</span> <small id="appVer" style="opacity:.6;margin-left:6px">版本 v94</small></span>
+    <span><span id="syncState">連線中…</span> <small id="appVer" style="opacity:.6;margin-left:6px">版本 v95</small></span>
     <span class="row" style="flex-wrap:wrap;justify-content:flex-end"><button id="install" hidden>安裝到手機</button><button id="csv">匯出 CSV</button><button id="wipe" style="color:var(--stamp);border-color:var(--stamp)">🗑 清除資料</button></span>
   </div>
   <div class="foot">
@@ -1077,13 +1077,16 @@ body.camOn{overflow:hidden}
   function setSticky(v){ stickyLoc=v||''; try{ localStorage.setItem('slipSticky',stickyLoc); }catch(_){} renderSticky(); if(camOn()) setStage(stage); }
   let lpCb=null, lpRow=null;
   function openPicker(title, cur, cb){
-    lpCb=cb; lpRow=null; $('lpTitle').textContent=title; $('lpFree').value=cur&&cur.startsWith('x:')?cur.slice(2):'';
+    lpCb=cb; lpRow=null; $('lpTitle').textContent=title;
+    { const m=cur&&String(cur).match(/^(?:o:)?(\d+)-/); lpMap = m ? rmapOf(+m[1]) : theMap(); } $('lpFree').value=cur&&cur.startsWith('x:')?cur.slice(2):'';
     renderPicker(cur); $('lpick').hidden=false;
   }
+  let lpMap='';
   function renderPicker(cur){
     const m=cur&&cur.match(/^(\d+)-(\d+)-/);
-    let h='';
-    layout.rows.forEach((row,r)=>{
+    const ML=mapList(); if(!ML.includes(lpMap)) lpMap=ML[0];
+    let h = ML.length>1 ? '<div class="maptabs" style="margin:6px 0 2px">'+ML.map(x=>'<button type="button" data-lpmap="'+esc(x)+'" aria-pressed="'+(x===lpMap)+'">'+esc(x)+'</button>').join('')+'</div>' : '';   // 先選哪一張地圖
+    layout.rows.forEach((row,r)=>{ if(rmapOf(r)!==lpMap) return;
       h+='<div class="meta">'+esc((layout.names&&layout.names[r])||('第'+(r+1)+'排'))+'</div><div class="lprow" style="grid-template-columns:repeat('+row.length+',1fr)">'+
         row.map((k,c)=>'<button data-lps="'+r+'-'+c+'" aria-pressed="'+(lpRow===r+'-'+c || (!lpRow && m && +m[1]===r && +m[2]===c))+'"><b>'+(c+1)+'</b>'+((k||[]).length?(k||[]).map(x=>'<small>'+mdk(x)+'</small>').join(''):'<small class="e">—</small>')+'</button>').join('')+'</div>';
     });
@@ -1093,6 +1096,7 @@ body.camOn{overflow:hidden}
   }
   $('lpick').addEventListener('click',e=>{
     if(e.target===$('lpick') || e.target.closest('#lpClose')){ $('lpick').hidden=true; return; }
+    const lm=e.target.closest('[data-lpmap]'); if(lm){ lpMap=lm.dataset.lpmap; lpRow=null; renderPicker(''); return; }
     const s=e.target.closest('[data-lps]'); if(s){ lpRow=s.dataset.lps; renderPicker(''); return; }
     const p=e.target.closest('[data-lp]'); if(p){ $('lpick').hidden=true; lpCb&&lpCb(p.dataset.lp); return; }
   });
