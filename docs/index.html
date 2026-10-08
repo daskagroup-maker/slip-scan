@@ -708,7 +708,7 @@ body.camOn{overflow:hidden}
   </section>
 
   <div class="foot">
-    <span><span id="syncState">連線中…</span> <small id="appVer" style="opacity:.6;margin-left:6px">版本 v91</small></span>
+    <span><span id="syncState">連線中…</span> <small id="appVer" style="opacity:.6;margin-left:6px">版本 v92</small></span>
     <span class="row" style="flex-wrap:wrap;justify-content:flex-end"><button id="install" hidden>安裝到手機</button><button id="csv">匯出 CSV</button><button id="wipe" style="color:var(--stamp);border-color:var(--stamp)">🗑 清除資料</button></span>
   </div>
   <div class="foot">
@@ -1067,7 +1067,7 @@ body.camOn{overflow:hidden}
     return {row:r, idx:1};
   }
   function renderSticky(){
-    const t = stickyLoc ? '📍 現在全部放：<b>'+esc(locShort(stickyLoc))+'</b>' : '📍 放置位置：自動（依出貨日）';
+    const t = stickyLoc ? '📍 現在全部放：<b>'+esc(locShort(stickyLoc))+'</b>'+(/^\d+-\d+-/.test(stickyLoc)?'<br><small style="opacity:.75">出貨日不同的，會放到那天的格子（同一區）</small>':'') : '📍 放置位置：自動（依出貨日）';
     const btn = stickyLoc ? '<button data-sticky="clear">改回自動</button>' : '<button data-sticky="set">指定位置</button>';
     const t2 = stickyRow ? '📏 現在放：<b>'+(stickySub>=0&&!stickyLoc?esc(subName(stickySub))+'・':'')+'第 '+stickyRow+' 列'+(pileMode()&&stickyG?'・第 '+stickyG+' 格':'')+'</b>（滿了接下一'+(pileMode()&&stickyG?'格':'列')+'）' : '📏 列・格：自動';
     const b2 = stickyRow ? '<button data-srow="clear">改回自動</button>' : '<button data-srow="set">指定列・格</button>';
@@ -1221,8 +1221,15 @@ body.camOn{overflow:hidden}
     if(pileMode() && stickyG>0 && it.row && (it.row!==stickyRow || gOf(it.idx)!==stickyG)){ stickyRow=it.row; stickyG=gOf(it.idx); saveSR(); renderSticky(); }
     else if(!(pileMode()&&stickyG>0) && it.row>stickyRow){ stickyRow=it.row; saveSR(); renderSticky(); }
   }
+  // 指定位置是某一格，但這箱的出貨日不在那一格 → 改放到「這天的格子」的同一區（列・格照指定）
+  function locForDate(date, loc){
+    const m=String(loc||'').match(/^(\d+)-(\d+)-(-?\d+)$/); if(!m) return loc;
+    const s=slotOf(date); if(!s || (s.r===+m[1] && s.c===+m[2])) return loc;
+    return s.r+'-'+s.c+'-'+m[3];
+  }
   async function addItem(code, date, size, order, explicit, loc){
     if(loc===undefined) loc=stickyLoc;
+    if(loc && loc===stickyLoc) loc=locForDate(date, loc);
     const hits=findCode(code);
     if(hits.length && !hits.some(h=>!gone(h.date,h.item))){   // 以前登記過、但已拿走或日期已過 → 當作重新入庫，重新給位置
       const h=hits[0], it=h.item, from=h.date;
@@ -1426,7 +1433,7 @@ body.camOn{overflow:hidden}
     $('shQuick').innerHTML=arr.map(d=>'<button data-qd="'+d+'" aria-pressed="'+(d===pending.date)+'">'+(d===TODAY?'今天 ':'')+md(d)+'</button>').join('');
     const od = pending.order ? parse(pending.order).getDay() : -1;
     $('shOrd').value = pending.order||'';
-    $('shLoc').setAttribute('style', stkStyle(pending.order)); $('shLoc').innerHTML = '📍 '+esc(locText(pending.date, curSize, pending.loc, previewSpot(pending.date,curSize,pending.loc,pending.order), pending.order))+' <button class="linkbtn" id="shLocBtn" style="font-size:14px">換位置</button>';
+    $('shLoc').setAttribute('style', stkStyle(pending.order)); $('shLoc').innerHTML = '📍 '+esc(locText(pending.date, curSize, (pending.loc===stickyLoc?locForDate(pending.date,pending.loc):pending.loc), previewSpot(pending.date,curSize,(pending.loc===stickyLoc?locForDate(pending.date,pending.loc):pending.loc),pending.order), pending.order))+' <button class="linkbtn" id="shLocBtn" style="font-size:14px">換位置</button>';
     $('shColors').innerHTML = WD_ORDER.map(w=>'<button class="cchip" data-cw="'+w+'" aria-pressed="'+(w===od)+'">'+swatch(w)+WD[w]+(colors[w]&&colors[w].name?'<small>'+esc(colors[w].name)+'</small>':'')+'</button>').join('');
     $('shSizes').innerHTML=sizes.map(s=>'<button class="sz" data-shs="'+esc(s)+'" style="--c:'+sizeColor(s)+'" aria-pressed="'+(s===curSize)+'">'+esc(s)+'</button>').join('');
     const q=$('shQuick').querySelector('[aria-pressed=true]'); q&&q.scrollIntoView({inline:'center',block:'nearest'});
