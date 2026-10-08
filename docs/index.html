@@ -777,7 +777,8 @@ body.camOn{overflow:hidden}
   const ROOT='slipScan';
   // 每張傳票各自一筆（days/日期/items/id）→ 多人同時登記不會互相覆蓋
   const itemPath=(date,id)=>'days/'+date+'/items/'+id;
-  const cleanOne=i=>({id:i.id, code:i.code, size:i.size||'', order:i.order||'', note:i.note||'', t:i.t||'', ts:i.ts||0, done:!!i.done, loc:i.loc||'', row:i.row||0, idx:i.idx||0, oh:i.oh||''});
+  let DEV=''; try{ DEV=localStorage.getItem('slipDev')||''; if(!DEV){ DEV=Math.random().toString(36).slice(2,8); localStorage.setItem('slipDev',DEV); } }catch(_){ DEV=Math.random().toString(36).slice(2,8); }   // 這支手機的代號
+  const cleanOne=i=>({id:i.id, code:i.code, size:i.size||'', order:i.order||'', note:i.note||'', t:i.t||'', ts:i.ts||0, done:!!i.done, loc:i.loc||'', row:i.row||0, idx:i.idx||0, oh:i.oh||'', dv:i.dv||''});
   const tsOf=i=>i.ts || parseInt(String(i.id).slice(0,8),36) || 0;
   const keyOf=code=>'c_'+String(code).replace(/[.#$\[\]\/\s]/g,'_');   // 用追蹤號碼當 key：兩台同時掃同一張只會有一筆
   let Q=[]; try{ Q=JSON.parse(localStorage.getItem('slipQ')||'[]'); }catch(_){ Q=[]; }
@@ -820,6 +821,27 @@ body.camOn{overflow:hidden}
     try{ await rtdb.ref(ROOT+'/sizes').set(sizes); }catch(e){ say('尺寸設定儲存失敗','warn'); }
   }
 
+  /* 兩支手機同時把貨排到同一個位置 → 比較晚登記的那箱，由登記它的手機重新排，並提醒 */
+  function fixClash(){
+    LIX=null; const seen=new Map(), bad=[];
+    for(const d in days) for(const it of days[d].items){ if(!it.row || gone(d,it)) continue;
+      const k=laneOnly(d,it.size,it.loc)+'|'+it.row+'|'+it.idx, o=seen.get(k);
+      if(!o){ seen.set(k,[d,it]); continue; }
+      const itLater = tsOf(it)>tsOf(o[1]) || (tsOf(it)===tsOf(o[1]) && it.id>o[1].id);
+      if(itLater) bad.push([d,it]); else { bad.push(o); seen.set(k,[d,it]); } }
+    const mine=bad.filter(([d,it])=>!it.dv || it.dv===DEV); if(!mine.length) return 0;
+    const msgs=[];
+    let moved=0;
+    withBulk(()=>mine.forEach(([d,it])=>{
+      if(pileMode()){   // 同一疊（同顏色同尺寸）就往上疊一層，不用搬
+        const ln=laneOnly(d,it.size,it.loc), g=gOf(it.idx), stk=STK(), cap=stkOf(it.size), used=new Set(); let same=true;
+        for(const d2 in days) for(const x of days[d2].items){ if(x===it || gone(d2,x) || x.row!==it.row || gOf(x.idx)!==g || laneOnly(d2,x.size,x.loc)!==ln) continue; used.add(lvOf(x.idx)); if(wdOf(x.order)!==wdOf(it.order) || (!layout.pileMix && String(x.size)!==String(it.size))) same=false; }
+        if(same){ for(let l=1;l<=cap;l++) if(!used.has(l)){ it.idx=(g-1)*stk+l; putItem(d,it); return; } }
+      }
+      if(stickyRow>0) stickyActive=true; placeItem(d,it); stickyActive=false; putItem(d,it); moved++; msgs.push(fmtCode(it.code)+' → '+locText(d,it.size,it.loc,it,it.order)); }));
+    LIX=null; if(moved) say('⚠ 另一支手機同時放了同一個位置，'+moved+' 箱改放：'+msgs.slice(0,3).join('、')+(msgs.length>3?' …':''),'warn');
+    return mine.length;
+  }
   let rtdb=null, online=false;
   async function init(){
     loadLocal(); if(assignMissingPos()) saveLocal(); render();
@@ -845,7 +867,7 @@ body.camOn{overflow:hidden}
         const toPush=localDays.filter(d=>!next[d] && !Q.some(op=>op.p.startsWith('days/'+d+'/')));
         if(toPush.length){ withBulk(()=>toPush.forEach(d=>(days[d]?days[d].items:[]).forEach(i=>putItem(d,i)))); say('已把本機的 '+toPush.length+' 天資料上傳雲端','ok'); }
       }
-      days=applyQ(next); saveLocal(); if(assignMissingPos()) saveLocal(); render();
+      days=applyQ(next); saveLocal(); if(assignMissingPos()) saveLocal(); fixClash(); render();
     }, e=>{ say('雲端讀取失敗：'+(e.code||e.message)+'（請檢查資料庫規則）','warn'); mode='local'; setSync(); });
     rtdb.ref(ROOT+'/colors').on('value',s=>{
       const v=s.val(); if(v && typeof v==='object'){ let changed=false;
@@ -1223,7 +1245,7 @@ body.camOn{overflow:hidden}
     }
     const d = days[date] || (days[date]={date, items:[]});
     const t = new Date();
-    const item = {id:keyOf(code), code, size, order:order||'', loc:loc||'', note:'', t:pad(t.getHours())+':'+pad(t.getMinutes()), ts:Date.now()};
+    const item = {id:keyOf(code), code, size, order:order||'', loc:loc||'', note:'', t:pad(t.getHours())+':'+pad(t.getMinutes()), ts:Date.now(), dv:DEV};
     stickyActive=true; placeItem(date,item); stickyActive=false;
     if(stickyRow>0 && pileMode() && stickyG>0 && item.row && (item.row!==stickyRow || gOf(item.idx)!==stickyG)){ const o='第 '+stickyRow+' 列第 '+stickyG+' 格'; stickyRow=item.row; stickyG=gOf(item.idx); saveSR(); renderSticky(); camToast(o+'滿了','接著放第 '+stickyRow+' 列第 '+stickyG+' 格'); }
     else if(stickyRow>0 && item.row>stickyRow){ const old=stickyRow; stickyRow=item.row; saveSR(); renderSticky(); camToast('第 '+old+' 列滿了','接著放第 '+stickyRow+' 列'); }
