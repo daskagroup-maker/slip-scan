@@ -275,6 +275,9 @@ form.manual.big button{font-size:20px;padding:0 22px}
 .daytot span{display:flex;align-items:baseline;gap:3px;background:#e8eef6;border-radius:6px;padding:2px 7px;font-size:12px}
 .daytot span b{font-size:15px;margin-left:3px}
 .daytot span{cursor:pointer}
+.tloc{margin-top:6px;padding:6px 10px;border-radius:8px;background:#ffd60a;color:#1d2a44;font-weight:900;font-size:1.05em;line-height:1.3}
+#recent li{flex-wrap:wrap}
+#recent .rloc{flex:0 0 100%;font-size:14px;font-weight:700;color:var(--ink);margin-top:2px}
 .stkd{display:inline-flex;flex-wrap:wrap;gap:4px;align-items:center;font-size:13px;margin-top:4px}
 .stkd button{padding:3px 10px;border:1px solid rgba(0,0,0,.3);border-radius:999px;background:#fff;font-size:14px;color:#222}
 .stkd button.on{background:#1d2a44;color:#fff;border-color:#1d2a44}
@@ -712,7 +715,7 @@ body.camOn{overflow:hidden}
   </section>
 
   <div class="foot">
-    <span><span id="syncState">連線中…</span> <small id="appVer" style="opacity:.6;margin-left:6px">版本 v97</small></span>
+    <span><span id="syncState">連線中…</span> <small id="appVer" style="opacity:.6;margin-left:6px">版本 v98</small></span>
     <span class="row" style="flex-wrap:wrap;justify-content:flex-end"><button id="install" hidden>安裝到手機</button><button id="csv">匯出 CSV</button><button id="wipe" style="color:var(--stamp);border-color:var(--stamp)">🗑 清除資料</button></span>
   </div>
   <div class="foot">
@@ -763,7 +766,7 @@ body.camOn{overflow:hidden}
   const parse = s => { const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d); };
   const md = s => { const d=parse(s); return (d.getMonth()+1)+'/'+d.getDate()+'('+WD[d.getDay()]+')'; };
   const esc = s => String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const TODAY = ymd(new Date());
+  let TODAY = ymd(new Date());
 
   let current = TODAY, month = TODAY.slice(0,7);
   let days = {};
@@ -1123,7 +1126,7 @@ body.camOn{overflow:hidden}
 
   let stage='scan', sessionList=[];
   function renderRecent(){
-    $('recent').innerHTML = sessionList.length ? '<div class="hd">剛剛登記</div>'+sessionList.slice(0,6).map(x=>'<li><span class="badge" style="--c:'+sizeColor(x.size)+'">'+esc(sizeLbl(x.size))+'</span><span class="c">'+esc(fmtCode(x.code))+'</span><span class="d">'+md(x.date)+'</span></li>').join('') : '';
+    $('recent').innerHTML = sessionList.length ? '<div class="hd">剛剛登記</div>'+sessionList.slice(0,6).map(x=>'<li><span class="badge" style="--c:'+sizeColor(x.size)+'">'+esc(sizeLbl(x.size))+'</span><span class="c">'+esc(fmtCode(x.code))+'</span><span class="d">'+md(x.date)+'</span>'+(()=>{ const w=whereIs(x.code); return w?'<span class="rloc">📍 '+esc(w)+'</span>':''; })()+'</li>').join('') : '';
   }
   /* 出貨期間（例：情人節檔期 1/20～2/10）：日期按鈕只列這段期間 */
   let period={start:'',end:''};
@@ -1229,10 +1232,13 @@ body.camOn{overflow:hidden}
   setInterval(()=>{ if(camOn()) placeVF(); }, 500);
   window.addEventListener('resize', ()=>{ if(camOn()) placeVF(); });
   function vfGot(){ const vf=$('vf'); vf.classList.add('got'); }
+  // 這張傳票現在放哪裡（相機提示、剛剛登記清單用）
+  function whereIs(code){ const h=findCode(code).find(x=>!gone(x.date,x.item)); if(!h) return ''; const P=placeOf(h.date,h.item.size,h.item.loc); if(!P) return '還沒分配格子'; return locText(h.date,h.item.size,h.item.loc,h.item,h.item.order).replace(/（[^（）]*・[^（）]*）\s*✋?\s*$/,'').replace(/\s*✋\s*$/,''); }
   function doneToast(title, code, date, size){
     buzz(80);
     sessionN++; if(!sheetOpen) setTimeout(()=>{ if(camOn()&&!colorStep&&!sheetOpen) setStage('scan'); },700);
-    camToast(title, esc(fmtCode(code))+'<br>'+md(date)+'　<span class="badge" style="--c:'+sizeColor(size)+'">'+esc(sizeLbl(size))+'</span>'); camInfo();
+    const w=whereIs(code);
+    camToast(title, esc(fmtCode(code))+'<br>'+md(date)+'　<span class="badge" style="--c:'+sizeColor(size)+'">'+esc(sizeLbl(size))+'</span>'+(w?'<div class="tloc">📍 '+esc(w)+'</div>':'')); camInfo();
   }
   // explicit=true：從尺寸選單儲存（使用者確認過）→ 已存在就更新；連續掃描模式則不動舊資料
   // 照「指定列・格」重新放一箱（重掃、改日期時用）
@@ -2586,7 +2592,12 @@ body.camOn{overflow:hidden}
     scanner=null; $('cam').classList.remove('on'); document.body.classList.remove('camOn'); $('lookup').classList.remove('on'); $('lookHome').after($('lookup'));
     if(sessionN) say('這次掃了 '+sessionN+' 張','ok');
   }
-  document.addEventListener('visibilitychange',()=>{ if(document.hidden && scanner) stopScan(); });   // 切到背景就關相機，省電
+  document.addEventListener('visibilitychange',()=>{ if(document.hidden && scanner) stopScan(); });
+  // 換日：App 開著過夜也會更新「今天」
+  function checkDay(){ const n=ymd(new Date()); if(n===TODAY) return; const old=TODAY; TODAY=n; slotCache.clear(); LIX=null;
+    if(current===old) go(n); else render(); try{ renderBatchDates(); }catch(_){} say('日期已更新為 '+md(n),'ok'); }
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden) checkDay(); });
+  window.addEventListener('focus',checkDay); setInterval(checkDay,60000);   // 切到背景就關相機，省電
   $('stop').onclick=()=>{ if(sheetOpen) closeSheet(); calibAll=false; stopScan(); };
   $('photoBtn').onclick=()=>$('photo').click();
   $('photo').onchange=async e=>{
