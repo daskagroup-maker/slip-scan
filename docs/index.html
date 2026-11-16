@@ -565,6 +565,105 @@ body.camOn{overflow:hidden}
 .cbar-in .sw{border-color:var(--line)!important}
 .cbar-in .sk{background:var(--paper)!important;color:var(--ink)!important;border:1px solid var(--line)!important}
 .sticky.on{color:#111}
+
+/* ===== 外觀 v2：倉庫地面標示 =====
+   地面灰（貼紙 7 色才看得準）／深藍墨色／地面黃膠帶只用在「指定位置、正在找」／紅印章只用在「今天出貨」 */
+:root{ --paper:#E7EAED; --card:#FFFFFF; --ink:#14213D; --ink2:#566175; --line:#C9D0D8; --tape:#FFD60A; --ok:#1F7A3A; --carbon:#14213D; --carbon-soft:#DDE3EB; }
+body{letter-spacing:.01em}
+.meta{font-size:13px;color:var(--ink2);font-weight:500}
+/* 第一層切換（登記／查詢）：深色底條，選到的是白色 */
+.mode{background:var(--ink);border:0;border-radius:14px;padding:4px;margin-bottom:14px}
+.mode button{color:rgba(255,255,255,.72);padding:11px 9px;border-radius:10px;font-weight:700;font-size:17px}
+.mode button[aria-pressed=true]{background:#fff;color:var(--ink)}
+/* 第二層切換：安靜的灰底，選到的是白卡 */
+.mode.smode{background:var(--carbon-soft);padding:3px;border-radius:11px;margin:4px 0 12px}
+.mode.smode button{color:var(--ink2);padding:9px;border-radius:8px;font-size:15px;font-weight:700}
+.mode.smode button[aria-pressed=true]{background:#fff;color:var(--ink);box-shadow:0 1px 0 var(--line), 0 0 0 1px var(--line)}
+.bhint{background:none;border-left:3px solid var(--line);border-radius:0;padding:2px 0 2px 10px;color:var(--ink2);font-size:13.5px;margin:0 0 12px}
+/* 輸入、選單：白底、沒有陰影、同一種圓角 */
+.manual input,.mfdate,.alt button,.datectl input[type=date],#month{border:1.5px solid var(--line);border-radius:10px;background:#fff}
+.manual input:focus,.mfdate:focus{border-color:var(--ink);outline:0}
+.manual button{border-radius:10px;background:var(--ink);font-size:16px}
+.nav{border:1.5px solid var(--line)!important;border-radius:10px!important;background:#fff!important}
+.check{color:var(--ink);font-size:14px;gap:10px}
+.check input{width:20px;height:20px;accent-color:var(--ink)}
+/* 掃描：整頁最主要的按鈕 */
+.scanbtn{background:var(--ink)!important;color:#fff!important;border:0!important;border-radius:14px!important;padding:17px!important;font-size:19px!important;font-weight:900!important;box-shadow:0 3px 0 #0a1226}
+.scanbtn:active{transform:translateY(2px);box-shadow:0 1px 0 #0a1226}
+/* 按鈕只有三種：主要（深藍）、一般（白底深藍框）、拿走（綠） */
+.donebtn{border:1.5px solid var(--ink);color:var(--ink);background:#fff;border-radius:9px;padding:6px 12px;font-size:14px;font-weight:700}
+.donebtn:disabled{opacity:.3}
+[data-act="done"],[data-lookdone]{background:var(--ok)!important;border-color:var(--ok)!important;color:#fff!important}
+.mapgo{border:1.5px solid var(--ink)!important;color:var(--ink)!important;background:#fff!important;border-radius:10px!important;font-weight:700}
+.linkbtn{color:var(--ink);text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--line)}
+/* 貼紙顏色、尺寸 */
+.cchip{border:1.5px solid var(--line);border-radius:12px;background:#fff;padding:7px 8px}
+.cchip[aria-pressed=true]{border-color:var(--ink);box-shadow:0 0 0 2px var(--ink)}
+.cchip i{width:28px;height:28px;border:1.5px solid rgba(20,33,61,.35)}
+/* 指定位置：地面黃膠帶（左邊斜紋）— 全頁唯一的強調 */
+.strow.on,.sticky.on{background:var(--tape);color:#14213D;border-radius:10px;padding:9px 10px 9px 22px;position:relative;overflow:hidden}
+.strow.on::before,.sticky.on::before{content:"";position:absolute;left:0;top:0;bottom:0;width:12px;background:repeating-linear-gradient(135deg,#14213D 0 6px,var(--tape) 6px 12px)}
+.sticky button{border:1.5px solid currentColor;border-radius:9px;padding:6px 11px;background:rgba(255,255,255,.55)}
+.sticky.light{color:var(--ink2)}
+.sticky.light .strow:not(.on) button{background:#fff;color:var(--ink);border-color:var(--ink)}
+.stkd button.on{background:#14213D;border-color:#14213D}
+/* 查詢結果 */
+.lookup{border:0;border-radius:16px;padding:16px 14px;box-shadow:0 0 0 1.5px var(--line)}
+.lookup .code{font-size:15px;letter-spacing:.06em;color:var(--ink2);font-weight:700}
+.lookup .bd{font-size:36px;letter-spacing:-.01em}
+.lookup .bs{border-radius:10px}
+/* 位置牌：貨架標示 */
+.locbig.plate{display:block;background:var(--ink);color:#fff;border-radius:12px;padding:12px 10px 10px;margin:10px 0;text-align:left;font-size:inherit;font-weight:inherit}
+.psegs{display:flex;flex-wrap:wrap;gap:6px}
+.pseg{background:rgba(255,255,255,.1);border-radius:8px;padding:6px 10px;font-size:19px;font-weight:700;line-height:1.2;white-space:nowrap}
+.pseg b{font-size:1.3em;font-weight:900;color:var(--tape);font-variant-numeric:tabular-nums;margin:0 1px}
+.pseg.p0{background:var(--tape);color:#14213D}
+.pseg.p0 b{color:#14213D}
+.ptags{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+.ptag{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:rgba(255,255,255,.85);border:1px solid rgba(255,255,255,.3);border-radius:999px;padding:2px 10px}
+.ptag i{width:13px;height:13px;border-radius:50%;border:1px solid rgba(255,255,255,.6)}
+/* 分頁 */
+.tabs{margin:22px 0 12px;border-bottom:2px solid var(--line)}
+.tabs button{font-size:17px;padding:11px 0;border-bottom:4px solid transparent;margin-bottom:-2px}
+.tabs button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--ink);font-weight:900}
+/* 地圖 */
+.daytot{margin:6px 0 8px}
+.daytot span{background:#fff;box-shadow:0 0 0 1px var(--line);border-radius:8px;color:var(--ink)}
+.daytot span b{font-variant-numeric:tabular-nums}
+.daytot span.on{background:var(--ink);color:#fff;box-shadow:none}
+.daytot span.t{background:#fff;color:var(--stamp);box-shadow:0 0 0 1.5px var(--stamp)}
+.w3d{background:#F3F5F7;border-radius:12px}
+.maptabs button{border:1.5px solid var(--line);font-weight:700;background:#fff}
+.maptabs button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink)}
+.miswarn{background:var(--tape);color:#14213D;border-radius:10px}
+.inlegend{font-size:12.5px}
+.vlab{border-radius:7px!important;font-weight:900}
+.vadd{border-radius:10px}
+.vname b{font-weight:900}
+/* 傳票清單 */
+.slip{border:0;border-left:7px solid var(--c,var(--sx));border-radius:10px;box-shadow:0 0 0 1px var(--line)}
+.slip.foundli{outline:0;box-shadow:0 0 0 3px var(--tape);background:#fff}
+.slip .code{letter-spacing:.03em}
+/* 月總覽 */
+.board{border:0;border-radius:12px;box-shadow:0 0 0 1px var(--line)}
+.board th{font-weight:700}
+.board tr.today td{background:#FDF1EF}
+.board td button{border-radius:7px;min-width:36px;padding:4px 6px}
+td.min,th.min{color:var(--ok)}
+/* 選位置的面板 */
+.lpin{border-radius:20px 20px 0 0;padding-top:10px}
+.lpin::before{content:"";display:block;width:44px;height:5px;border-radius:3px;background:var(--line);margin:0 auto 10px}
+.lphead{font-size:18px}
+.lprow button{border:1.5px solid var(--line);border-radius:10px;background:#fff}
+.lprow button[aria-pressed=true]{background:var(--ink);border-color:var(--ink)}
+.lpauto{border:1.5px dashed var(--ink2);border-radius:10px;color:var(--ink);font-weight:700}
+.rpcol button{border:1.5px solid var(--line);border-radius:10px}
+.rpcol button.some{background:var(--carbon-soft)}
+.rpcol button.on{background:var(--ink);border-color:var(--ink)}
+.foot{border-top:1px solid var(--line);padding-top:14px}
+.foot button{border:1.5px solid var(--line);border-radius:9px;background:#fff}
+.msg.ok{color:var(--ok);font-weight:700} .msg.warn{font-weight:700}
+@media (prefers-reduced-motion: reduce){ .scanbtn:active{transform:none} }
 </style>
 </head>
 <body>
@@ -715,7 +814,7 @@ body.camOn{overflow:hidden}
   </section>
 
   <div class="foot">
-    <span><span id="syncState">連線中…</span> <small id="appVer" style="opacity:.6;margin-left:6px">版本 v98</small></span>
+    <span><span id="syncState">連線中…</span> <small id="appVer" style="opacity:.6;margin-left:6px;white-space:nowrap">版本 v99</small></span>
     <span class="row" style="flex-wrap:wrap;justify-content:flex-end"><button id="install" hidden>安裝到手機</button><button id="csv">匯出 CSV</button><button id="wipe" style="color:var(--stamp);border-color:var(--stamp)">🗑 清除資料</button></span>
   </div>
   <div class="foot">
@@ -1392,7 +1491,7 @@ body.camOn{overflow:hidden}
     const hit=hits.find(h=>h.date===pickDay);
     if(hits.length && pickDay){
       const flash=(ok)=>{ if(camOn()){ const c=$('cam'); c.classList.remove('hit','bad'); void c.offsetWidth; c.classList.add(ok?'hit':'bad'); setTimeout(()=>c.classList.remove('hit','bad'),900); } };
-      const locOf=(d,it)=>'<div class="locbig" style="'+stkStyle(it.order)+'">📍 '+esc(locText(d,it.size,it.loc,it,it.order))+'</div>'+'<button class="mapgo" data-showmap="'+d+'|'+it.id+'">🗺 在地圖上看</button>';
+      const locOf=(d,it)=>locPlate(d,it)+'<button class="mapgo" data-showmap="'+d+'|'+it.id+'">🗺 在地圖上看</button>';
       if(hit){
         const was=hit.item.done; if(!was && $('pickAuto').checked) setDone(hit.date, hit.item.id, true);
         const L=days[pickDay].items, done=L.filter(i=>i.done).length;
@@ -1417,7 +1516,7 @@ body.camOn{overflow:hidden}
     box.className='lookup on';
     box.innerHTML='<div class="code">'+esc(fmtCode(code))+'</div>'+hits.map(h=>{
       const late = h.date<TODAY ? '<div class="meta" style="color:var(--stamp)">出貨日已過</div>' : (h.date===TODAY?'<div class="meta" style="color:var(--stamp)">今天出貨</div>':'');
-      const loc = '<div class="locbig" style="'+stkStyle(h.item.order)+'">📍 '+esc(locText(h.date,h.item.size,h.item.loc,h.item,h.item.order))+'</div>'+'<button class="mapgo" data-showmap="'+h.date+'|'+h.item.id+'">🗺 在地圖上看</button>';
+      const loc = locPlate(h.date,h.item)+'<button class="mapgo" data-showmap="'+h.date+'|'+h.item.id+'">🗺 在地圖上看</button>';
       return '<div class="big"><div class="bd">'+md(h.date)+'</div><div class="bs" style="--c:'+sizeColor(h.item.size)+'">'+esc(sizeLbl(h.item.size))+'</div></div>'+loc+late+
         (h.item.done?'<div class="meta" style="color:var(--ok)">✓ 已拿走／出貨</div><div><button class="donebtn" data-lookundo="'+h.date+'|'+h.item.id+'|'+esc(h.item.code)+'" style="font-size:16px;padding:8px 16px;margin-top:6px;border-color:var(--stamp);color:var(--stamp)">↩ 復原（還在倉庫）</button></div>':'<div><button class="donebtn" data-lookdone="'+h.date+'|'+h.item.id+'" style="font-size:16px;padding:8px 16px;margin-top:6px">✓ 出貨了</button></div>')+
         (h.item.note?'<div class="meta">'+esc(h.item.note)+'</div>':'');
@@ -1527,6 +1626,13 @@ body.camOn{overflow:hidden}
   }
   function placeLabel(P){ if(!P) return '未分配位置'; if(P.free!=null) return P.free; return slotName(P)+(P.i>=0&&subName(P.i)?'・'+subName(P.i):''); }
   const wdOf=o=>o?parse(o).getDay():'x';
+  // 位置牌：像貨架標示，一段一段分開（哪一格｜區｜列｜格｜第幾箱）＋貼紙顏色、尺寸
+  function locPlate(d,it){
+    const P=placeOf(d,it.size,it.loc); const txt=(placeLabel(P)+(P?spotTxt(it):'')).replace(/^・/,'').replace(/（疊第 (\d+) 箱）/,'・由下數第 $1 箱');
+    const seg=txt.split('・').filter(Boolean), w=wdOf(it.order);
+    return '<div class="locbig plate"><div class="psegs">'+seg.map((x,i)=>'<span class="pseg'+(i===0?' p0':'')+'">'+esc(x).replace(/(\d+)/g,'<b>$1</b>')+'</span>').join('')+'</div>'+
+      '<div class="ptags"><span class="ptag"><i style="background:'+(w==='x'?'#cfd5dd':'rgb('+colors[w].rgb.join(',')+')')+'"></i>'+esc(colLbl(it.order))+'</span><span class="ptag">'+esc(sizeLbl(it.size))+'</span>'+(P&&P.manual?'<span class="ptag">手動指定</span>':'')+'</div></div>';
+  }
   const stkStyle=o=>o?'background:rgb('+colors[parse(o).getDay()].rgb.join(',')+');color:#222':'background:var(--carbon-soft);color:var(--carbon)';
   const colLbl=o=>o?COLNAME(parse(o).getDay())+'色':'無貼紙';
   // 位置的最後兩層：第幾列（由上往下）、第幾個（一列最多 cap 個）。每個貼紙顏色從新的一列開始
