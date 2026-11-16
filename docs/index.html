@@ -276,6 +276,14 @@ form.manual.big button{font-size:20px;padding:0 22px}
 .daytot span b{font-size:15px;margin-left:3px}
 .daytot span{cursor:pointer}
 #dupAlert{position:fixed;left:50%;top:38%;transform:translate(-50%,-50%) scale(.9);z-index:9999;opacity:0;pointer-events:none;transition:opacity .15s,transform .15s;width:min(88vw,420px)}
+#dupAlert.ok .da-in{background:#1F7A3A}
+.pkbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.pkbtn{min-height:44px;padding:0 14px;border-radius:12px;border:2px solid var(--ink,#14213D);background:var(--tape,#FFD60A);color:#14213D;font-weight:900;font-size:15px}
+.pkbtn.on{background:#fff}
+.pkhint{margin:4px 0 8px;padding:8px 10px;border-radius:10px;background:#FFF6C2;border:2px dashed #14213D;font-weight:700;font-size:14px;line-height:1.5;color:#14213D}
+.ic.pk{border:2px dashed #8A94A6;background:#fff;color:#14213D;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ic.pk.some{border-style:solid;background:#E7EAED}.ic.pk.full2{background:#C9CED6}
+.ic.stk{outline:4px solid #FFD60A;outline-offset:-2px;box-shadow:0 0 0 2px #14213D}
 #dupAlert.on{opacity:1;transform:translate(-50%,-50%) scale(1);pointer-events:auto}
 #dupAlert .da-in{background:#C8372D;color:#fff;border-radius:18px;padding:18px 16px;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.35)}
 #dupAlert .da-t{font-size:26px;font-weight:900}
@@ -828,7 +836,7 @@ td.min,th.min{color:var(--ok)}
   </section>
 
   <div class="foot">
-    <span><span id="syncState">連線中…</span> <small id="appVer" style="opacity:.6;margin-left:6px;white-space:nowrap">版本 v104</small></span>
+    <span><span id="syncState">連線中…</span> <small id="appVer" style="opacity:.6;margin-left:6px;white-space:nowrap">版本 v106</small></span>
     <span class="row" style="flex-wrap:wrap;justify-content:flex-end"><button id="install" hidden>安裝到手機</button><button id="csv">匯出 CSV</button><button id="wipe" style="color:var(--stamp);border-color:var(--stamp)">🗑 清除資料</button></span>
   </div>
   <div class="foot">
@@ -1191,7 +1199,7 @@ td.min,th.min{color:var(--ok)}
   }
   function renderSticky(){
     const t = stickyLoc ? '📍 現在全部放：<b>'+esc(locShort(stickyLoc))+'</b>'+(()=>{ const D=stickyDates(); return D.length?'<br><span class="stkd">出貨日：'+D.map(d=>'<button type="button" data-stkdate="'+d+'" class="'+(d===current?'on':'')+'">'+md(d)+'</button>').join('')+'</span>':''; })() : '📍 放置位置：自動（依出貨日）';
-    const btn = stickyLoc ? '<button data-sticky="clear">改回自動</button>' : '<button data-sticky="set">指定位置</button>';
+    const btn = (pileMode()&&layout.colDir!=='h'?'<button data-sticky="map">🗺 地圖上點</button>':'')+(stickyLoc ? '<button data-sticky="clear">改回自動</button>' : '<button data-sticky="set">指定位置</button>');
     const t2 = stickyRow ? '📏 現在放：<b>'+(stickySub>=0&&!stickyLoc?esc(subName(stickySub))+'・':'')+'第 '+stickyRow+' 列'+(pileMode()&&stickyG?'・第 '+stickyG+' 格':'')+'</b>（滿了接下一'+(pileMode()&&stickyG?'格':'列')+'）' : '📏 列・格：自動';
     const b2 = stickyRow ? '<button data-srow="clear">改回自動</button>' : '<button data-srow="set">指定列・格</button>';
     [$('stickyBar'),$('stickyMain')].forEach(el=>{ if(!el) return; el.innerHTML='<div class="strow'+(stickyLoc?' on':'')+'"><span style="flex:1">'+t+'</span>'+btn+'</div><div class="strow'+(stickyRow?' on':'')+'"><span style="flex:1">'+t2+'</span>'+b2+'</div>'; el.classList.remove('on'); });
@@ -1236,7 +1244,7 @@ td.min,th.min{color:var(--ok)}
     const rp=e.target.closest('[data-rp]'); if(rp){ const [r,g]=rp.dataset.rp.split('-').map(Number); $('rpick').hidden=true; rpCb&&rpCb(r,g,rpSub); return; }
     if(e.target.id==='rpick' || e.target.closest('#rpClose')){ $('rpick').hidden=true; return; }
     const sd=e.target.closest('[data-stkdate]'); if(sd){ go(sd.dataset.stkdate); renderSticky(); if(camOn()) setStage(stage); say('出貨日改成 '+md(sd.dataset.stkdate),'ok'); return; }
-    const st=e.target.closest('[data-sticky]'); if(st){ if(st.dataset.sticky==='clear') setSticky(''); else openPicker('之後掃的全部放到…', stickyLoc, v=>setSticky(v)); return; }
+    const st=e.target.closest('[data-sticky]'); if(st){ if(st.dataset.sticky==='map'){ mapPickStart(); return; } if(st.dataset.sticky==='clear'){ setSticky(''); stickyRow=0; stickyG=0; stickySub=-1; saveSR(); renderSticky(); } else openPicker('之後掃的全部放到…', stickyLoc, v=>setSticky(v)); return; }
     if(e.target.closest('#shLocBtn') && pending){ openPicker('這張放到…', pending.loc, v=>{ pending.loc=v; renderSheet(); }); return; }
   });
 
@@ -1588,11 +1596,28 @@ td.min,th.min{color:var(--ok)}
   /* ---------- render ---------- */
   // 重複掃到：畫面中間大大的提醒＋低音嗶嗶（相機畫面也看得到）
   let dupTimer=0;
-  function dupAlert(code, sub){
-    buzz([80,60,80]); let el=$('dupAlert'); if(!el){ el=document.createElement('div'); el.id='dupAlert'; el.setAttribute('role','alert'); document.body.appendChild(el); el.onclick=()=>el.classList.remove('on'); }
-    el.innerHTML='<div class="da-in"><div class="da-t">⚠ 重複掃到</div><div class="da-c">'+esc(code)+'</div><div class="da-s">已經登記過了'+(sub?'<br>'+esc(sub):'')+'</div></div>';
-    el.classList.remove('on'); void el.offsetWidth; el.classList.add('on'); clearTimeout(dupTimer); dupTimer=setTimeout(()=>el.classList.remove('on'),2600);
-    camToast('⚠ 重複掃到', esc(code)+'<br>已經登記過了'+(sub?'<br>'+esc(sub):''), true);
+  function dupAlert(code, sub){ buzz([80,60,80]); bigAlert('⚠ 重複掃到', code, '已經登記過了'+(sub?'<br>'+esc(sub):''), false);
+    camToast('⚠ 重複掃到', esc(code)+'<br>已經登記過了'+(sub?'<br>'+esc(sub):''), true); }
+  function bigAlert(title, big, subHtml, ok){
+    let el=$('dupAlert'); if(!el){ el=document.createElement('div'); el.id='dupAlert'; el.setAttribute('role','alert'); document.body.appendChild(el); el.onclick=()=>el.classList.remove('on'); }
+    el.className=ok?'ok':''; el.innerHTML='<div class="da-in"><div class="da-t">'+esc(title)+'</div><div class="da-c">'+esc(big)+'</div><div class="da-s">'+subHtml+'</div></div>';
+    void el.offsetWidth; el.classList.add('on'); clearTimeout(dupTimer); dupTimer=setTimeout(()=>el.classList.remove('on'),2600);
+  }
+  // 地圖上點一格 → 設成「指定位置＋列・格」
+  function setFromMap(v){
+    const [loc,r,g]=v.split('|'); setSticky(loc);
+    stickyRow=+r; stickyG=pileMode()?+g:0; stickySub=-1; saveSR(); renderSticky();
+    mapPick=false; renderMap(); if(pending) renderSheet(); if(camOn()) setStage(stage);
+    const t=locShort(loc)+'・第 '+r+' 列'+(stickyG?'・第 '+g+' 格':'');
+    say('之後掃的放：'+t,'ok'); beep(true); bigAlert('📍 已指定位置', t, '之後掃的都放這裡<br>滿了會自動接下一格', true);
+  }
+  // 從黃色欄直接打開地圖點位置
+  function mapPickStart(){
+    showTab('map'); mapEdit=false; mapPick=true; cellHi=null;
+    const m=String(stickyLoc).match(/^(\d+)-(\d+)-/), s=m?{r:+m[1],c:+m[2]}:slotOf(current);
+    if(s){ setMap(rmapOf(s.r)); mapSel=s.r+'-'+s.c; } renderMap();
+    setTimeout(()=>{ const el=$('mapCell'); if(el) el.scrollIntoView({block:'start',behavior:'smooth'}); },60);
+    if(!s) say('先在地圖上點要放的格子，再按「📍 點一格」','ok');
   }
   function say(t,cls){ const m=$('msg'); m.textContent=t; m.className='msg'+(cls?' '+cls:''); }
   // 像超商收銀：掃到就「嗶」一聲；錯誤或重複是低音「嗶嗶」
@@ -1817,7 +1842,7 @@ td.min,th.min{color:var(--ok)}
     const out=[]; for(const d in days) for(const it of days[d].items) if(!gone(d,it)) out.push({date:d,it});
     return out;
   }
-  let mapEdit=false, findHi=null, cellHi=null;
+  let mapEdit=false, findHi=null, cellHi=null, mapPick=false;   // mapPick：在地圖上點一格當作指定位置
   /* ===== 3D 倉庫圖（等角視角）：每格的貨疊成一堆，高度＝箱數，顏色＝貼紙顏色 ===== */
   let view3d=true; try{ view3d=localStorage.getItem('slipV3d')!=='0'; }catch(_){}
   // 手動放到「不是自己出貨日的格子」的貨
@@ -1949,7 +1974,7 @@ td.min,th.min{color:var(--ok)}
   function drawSlotV(sid, S, cell, si, cap){
     const areas=slotAreas(sid,S,cell,cap);
     const addBtn=pos=>'<button type="button" class="vadd" data-addsub="'+pos+'" aria-label="'+(pos===0?'在最左邊加一區':'在最右邊加一區')+'"><b>＋</b><span>加<br>一<br>區</span></button>';
-    if(!view3d){   // 平面
+    if(!view3d || mapPick){   // 平面（點選位置時一定用平面，比較好點）
       let h='<div class="vmap">'+addBtn(0);
       areas.forEach((A,ai)=>{
         if(ai) h+='<div class="vaisle"><span>通<br>路</span></div>';
@@ -1957,13 +1982,17 @@ td.min,th.min{color:var(--ok)}
         A.cols.forEach(C=>{
           const lbg = C.w==null||C.w==='x' ? 'var(--line)' : 'rgb('+colors[C.w].rgb.join(',')+')';
           h+='<div class="vcol'+(C.hi?' hi':'')+'"><span class="vlab" style="background:var(--line)">'+C.r+'</span>';
+          const subI=(layout.subs||[]).length?A.i:-1;
           for(let k=1;k<=A.depth;k++){ const pile=C.R[k];
-            if(!pile||!pile.length){ h+='<span class="ic"></span>'; continue; }
+            const isStk = stickyLoc===sid+'-'+subI && stickyRow===C.r && (!pileMode()||stickyG===k);
+            if(mapPick){ const n=pile?pile.length:0, ch=stkOf(n?pile[0].it.size:'');
+              h+='<button type="button" class="ic pk'+(n?' some':'')+(n>=ch?' full2':'')+(isStk?' stk':'')+'" data-setloc="'+sid+'-'+subI+'|'+C.r+'|'+k+'" aria-label="指定放第'+C.r+'列第'+k+'格">'+(n?'<b>'+n+'</b><small>箱</small>':'')+'</button>'; continue; }
+            if(!pile||!pile.length){ h+='<span class="ic'+(isStk?' stk':'')+'"></span>'; continue; }
             const x=pile.find(q=>q.it.id===findHi)||pile.find(q=>q.it.id===cellHi)||pile[pile.length-1];
             const cs=pile.map(q=>{ const qw=wdOf(q.it.order); return qw==='x'?'#cfd5dd':'rgb('+colors[qw].rgb.join(',')+')'; });
             const bg=[...new Set(cs)].length===1?cs[0]:'linear-gradient(to top,'+cs.map((c,i)=>c+' '+(i*100/cs.length)+'% '+((i+1)*100/cs.length)+'%').join(',')+')';
             const any=f=>pile.some(f), stk=STK();
-            h+='<button class="ic full'+(any(q=>q.date===TODAY)?' t':'')+(any(q=>q.it.id===findHi)?' f':'')+(any(q=>q.it.id===cellHi)?' sel':'')+'" style="background:'+bg+'" data-cell="'+x.date+'|'+x.it.id+'" aria-label="第'+C.r+'列第'+k+'格，疊'+pile.length+'箱">'+(stk>1?'<b>'+pile.length+'</b><small>'+'箱'+'</small>':k)+'</button>'; }
+            h+='<button class="ic full'+(isStk?' stk':'')+(any(q=>q.date===TODAY)?' t':'')+(any(q=>q.it.id===findHi)?' f':'')+(any(q=>q.it.id===cellHi)?' sel':'')+'" style="background:'+bg+'" data-cell="'+x.date+'|'+x.it.id+'" aria-label="第'+C.r+'列第'+k+'格，疊'+pile.length+'箱">'+(stk>1?'<b>'+pile.length+'</b><small>'+'箱'+'</small>':k)+'</button>'; }
           h+='</div>';
         });
         h+='</div><div class="vname"><b>'+esc(A.sub.n||'')+'</b> '+(layout.anySize?'':esc((A.sub.s||[]).length>2?A.sub.s[0]+'〜':(A.sub.s||[]).join('・')))+'<br><span class="meta">'+A.M.length+' 箱</span></div></div>';
@@ -2135,7 +2164,7 @@ td.min,th.min{color:var(--ok)}
     const slotSel = mapSel && !mapSel.startsWith('x:') && mapSel!=='none' ? mapSel.split('-').map(Number) : null;
     if(slotSel && !mapEdit){
       const [rr,cc,si]=slotSel, sid=rr+'-'+cc, keys=layout.rows[rr]&&layout.rows[rr][cc]||[], L=cell[sid]||[];
-      let out=noneTxt+'<div class="inhead"><b>📍 '+esc(slotName({r:rr,c:cc}))+'</b>　'+keys.map(mdk).join('・')+'　共 '+L.length+' 箱</div><button class="donebtn" data-slot="'+sid+'" style="margin:2px 0 6px">✕ 關閉，回到全部</button>';
+      let out=noneTxt+'<div class="inhead"><b>📍 '+esc(slotName({r:rr,c:cc}))+'</b>　'+keys.map(mdk).join('・')+'　共 '+L.length+' 箱</div><div class="pkbar"><button class="donebtn" data-slot="'+sid+'" style="margin:2px 0 6px">✕ 關閉，回到全部</button>'+(pileMode()&&layout.colDir!=='h'?'<button type="button" class="pkbtn'+(mapPick?' on':'')+'" data-mappick>'+(mapPick?'✕ 取消點選':'📍 點一格，指定之後放這裡')+'</button>':'')+'</div>'+(mapPick?'<p class="pkhint">點下面任何一格（有貨、空的都可以），之後掃的貨就放那一格，滿了自動接下一格。</p>':'');
       out+='<div class="inlegend">'+(pileMode()?'每一格＝一疊，數字＝疊了幾箱':'每一格＝一箱')+'，顏色＝貼紙顏色　<i class="lg2 t"></i>今天出貨　<i class="lg2 f"></i>正在找的</div>';
       const cap=RCAP(), up=layout.posFrom!=='aisle';
       if(layout.colDir!=='h'){ out+=drawSlotV(sid, S.length?S:[{n:'',s:[]}], cell, si, cap); }
@@ -2316,7 +2345,10 @@ td.min,th.min{color:var(--ok)}
       }); return; }
     if(pickSlot(e)) return;
   });
-  $('mapCell').addEventListener('click',e=>{ const ad=e.target.closest('[data-addsub]'); if(ad){ e.stopImmediatePropagation(); insertSub(+ad.dataset.addsub); return; } const c=e.target.closest('[data-cell]'); if(!c) return; e.stopImmediatePropagation(); const i=c.dataset.cell.indexOf('|'); cellHi=c.dataset.cell.slice(i+1); renderMap(); setTimeout(()=>{ const k=$('cellCard'); if(k) k.scrollIntoView({block:'nearest',behavior:'smooth'}); },50); }, true);
+  $('mapCell').addEventListener('click',e=>{
+    const mp=e.target.closest('[data-mappick]'); if(mp){ e.stopImmediatePropagation(); mapPick=!mapPick; cellHi=null; renderMap(); return; }
+    const sl=e.target.closest('[data-setloc]'); if(sl){ e.stopImmediatePropagation(); setFromMap(sl.dataset.setloc); return; }
+    const ad=e.target.closest('[data-addsub]'); if(ad){ e.stopImmediatePropagation(); insertSub(+ad.dataset.addsub); return; } const c=e.target.closest('[data-cell]'); if(!c) return; e.stopImmediatePropagation(); const i=c.dataset.cell.indexOf('|'); cellHi=c.dataset.cell.slice(i+1); renderMap(); setTimeout(()=>{ const k=$('cellCard'); if(k) k.scrollIntoView({block:'nearest',behavior:'smooth'}); },50); }, true);
   $('mapCell').onclick=e=>{
     const cp=e.target.closest('[data-compact]'); if(cp){ const i=cp.dataset.compact.lastIndexOf('|'); const n=compactRow({lane:cp.dataset.compact.slice(0,i), row:+cp.dataset.compact.slice(i+1)}, true); render(); say(n?'已重新排號':'順序已經是連續的','ok'); return; }
     if(pickSlot(e)) return;
