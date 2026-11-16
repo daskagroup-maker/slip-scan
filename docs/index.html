@@ -828,7 +828,7 @@ td.min,th.min{color:var(--ok)}
   </section>
 
   <div class="foot">
-    <span><span id="syncState">連線中…</span> <small id="appVer" style="opacity:.6;margin-left:6px;white-space:nowrap">版本 v102</small></span>
+    <span><span id="syncState">連線中…</span> <small id="appVer" style="opacity:.6;margin-left:6px;white-space:nowrap">版本 v103</small></span>
     <span class="row" style="flex-wrap:wrap;justify-content:flex-end"><button id="install" hidden>安裝到手機</button><button id="csv">匯出 CSV</button><button id="wipe" style="color:var(--stamp);border-color:var(--stamp)">🗑 清除資料</button></span>
   </div>
   <div class="foot">
@@ -1473,7 +1473,7 @@ td.min,th.min{color:var(--ok)}
     if(sheetOpen) return;
     lastCode=code; lastAt=now;
     if(appMode==='look'){ showLookup(code); return; }
-    if(appMode==='add' && stickyRow<=0 && !stickyLoc){   // 已經在倉庫的 → 馬上提醒重複，不再問尺寸
+    if(appMode==='add'){   // 已經在倉庫的 → 馬上提醒重複，不再問尺寸
       const live=findCode(code).find(h=>!gone(h.date,h.item));
       if(live){ const w=whereIs(code); dupAlert(fmtCode(code), md(live.date)+(w?'　📍 '+w:'')); say('「'+fmtCode(code)+'」已經登記過了（'+md(live.date)+'）'+(w?'：'+w:''),'warn'); return; }
     }
