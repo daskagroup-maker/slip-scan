@@ -275,6 +275,13 @@ form.manual.big button{font-size:20px;padding:0 22px}
 .daytot span{display:flex;align-items:baseline;gap:3px;background:#e8eef6;border-radius:6px;padding:2px 7px;font-size:12px}
 .daytot span b{font-size:15px;margin-left:3px}
 .daytot span{cursor:pointer}
+#dupAlert{position:fixed;left:50%;top:38%;transform:translate(-50%,-50%) scale(.9);z-index:9999;opacity:0;pointer-events:none;transition:opacity .15s,transform .15s;width:min(88vw,420px)}
+#dupAlert.on{opacity:1;transform:translate(-50%,-50%) scale(1);pointer-events:auto}
+#dupAlert .da-in{background:#C8372D;color:#fff;border-radius:18px;padding:18px 16px;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.35)}
+#dupAlert .da-t{font-size:26px;font-weight:900}
+#dupAlert .da-c{font-size:22px;font-weight:900;letter-spacing:.04em;margin:6px 0;font-variant-numeric:tabular-nums}
+#dupAlert .da-s{font-size:16px;font-weight:700;line-height:1.5;opacity:.95}
+@media (prefers-reduced-motion: reduce){ #dupAlert{transition:none} }
 .gunbar{display:flex;align-items:center;gap:8px;margin:0 0 10px;padding:9px 12px;border-radius:10px;background:#E4F2E8;color:#1F5E33;font-weight:700;font-size:15px}
 .gunbar .gdot{width:10px;height:10px;border-radius:50%;background:#1F7A3A;box-shadow:0 0 0 0 rgba(31,122,58,.5);animation:gpulse 2s infinite}
 @keyframes gpulse{70%{box-shadow:0 0 0 8px rgba(31,122,58,0)}100%{box-shadow:0 0 0 0 rgba(31,122,58,0)}}
@@ -821,7 +828,7 @@ td.min,th.min{color:var(--ok)}
   </section>
 
   <div class="foot">
-    <span><span id="syncState">連線中…</span> <small id="appVer" style="opacity:.6;margin-left:6px;white-space:nowrap">版本 v101</small></span>
+    <span><span id="syncState">連線中…</span> <small id="appVer" style="opacity:.6;margin-left:6px;white-space:nowrap">版本 v102</small></span>
     <span class="row" style="flex-wrap:wrap;justify-content:flex-end"><button id="install" hidden>安裝到手機</button><button id="csv">匯出 CSV</button><button id="wipe" style="color:var(--stamp);border-color:var(--stamp)">🗑 清除資料</button></span>
   </div>
   <div class="foot">
@@ -1381,12 +1388,12 @@ td.min,th.min{color:var(--ok)}
         else fixPos(date,it,ok0);
         freshId=it.id; putItem(date,it); say('已更新 '+fmtCode(code)+' → '+locText(date,it.size,it.loc,it,it.order),'ok'); doneToast('✓ 已更新', code, date, it.size); render(); return;
         say('已更新 '+fmtCode(code)+' → '+sizeLbl(size),'ok'); doneToast('✓ 已更新', code, date, size); render(); putItem(date,same.item);
-      } else { buzz([80,60,80]); say('「'+fmtCode(code)+'」在 '+md(date)+' 已經登記過了：'+locText(date,same.item.size,same.item.loc,same.item,same.item.order),'warn'); camToast('已經登記過', esc(fmtCode(code))+'<br>'+md(date), true); buzz([60,60,60]); }
+      } else { dupAlert(fmtCode(code), md(date)+'　📍 '+whereIs(code)); say('「'+fmtCode(code)+'」在 '+md(date)+' 已經登記過了：'+locText(date,same.item.size,same.item.loc,same.item,same.item.order),'warn'); }
       return;
     }
     if(hits.length){
       if(!explicit && stickyRow>0){ const h=hits[0], it=h.item, sp0=spotOf(h.date,it); if(loc) it.loc=loc; reSticky(h.date,it,sp0); freshId=it.id; putItem(h.date,it); say('已更新 '+fmtCode(code)+' → '+locText(h.date,it.size,it.loc,it,it.order),'ok'); doneToast('✓ 已更新', code, h.date, it.size); render(); return; }
-      if(!explicit){ buzz([80,60,80]); const h0=hits.find(h=>!gone(h.date,h.item))||hits[0]; say('「'+fmtCode(code)+'」已登記在 '+hits.map(h=>md(h.date)).join('、')+'，沒有變更：'+locText(h0.date,h0.item.size,h0.item.loc,h0.item,h0.item.order),'warn'); camToast('已登記在 '+md(hits[0].date), esc(fmtCode(code))+'<br>沒有變更', true); buzz([60,60,60]); return; }
+      if(!explicit){ dupAlert(fmtCode(code), whereIs(code)); const h0=hits.find(h=>!gone(h.date,h.item))||hits[0]; say('「'+fmtCode(code)+'」已登記在 '+hits.map(h=>md(h.date)).join('、')+'，沒有變更：'+locText(h0.date,h0.item.size,h0.item.loc,h0.item,h0.item.order),'warn'); return; }
       const h=hits[0], it=h.item, from=h.date;
       days[from].items=days[from].items.filter(i=>i!==it); if(!days[from].items.length) delete days[from];
       hits.slice(1).forEach(x=>{ days[x.date].items=days[x.date].items.filter(i=>i!==x.item); if(!days[x.date].items.length) delete days[x.date]; delItem(x.date,x.item.id); });
@@ -1466,6 +1473,10 @@ td.min,th.min{color:var(--ok)}
     if(sheetOpen) return;
     lastCode=code; lastAt=now;
     if(appMode==='look'){ showLookup(code); return; }
+    if(appMode==='add' && stickyRow<=0 && !stickyLoc){   // 已經在倉庫的 → 馬上提醒重複，不再問尺寸
+      const live=findCode(code).find(h=>!gone(h.date,h.item));
+      if(live){ const w=whereIs(code); dupAlert(fmtCode(code), md(live.date)+(w?'　📍 '+w:'')); say('「'+fmtCode(code)+'」已經登記過了（'+md(live.date)+'）'+(w?'：'+w:''),'warn'); return; }
+    }
     if(appMode==='add' && isBatch()){
       if(sizeFixed) addItem(code, current, curSize, batchOrd(), true);
       else openSheet(code, batchOrd(), false);
@@ -1572,6 +1583,14 @@ td.min,th.min{color:var(--ok)}
   }
 
   /* ---------- render ---------- */
+  // 重複掃到：畫面中間大大的提醒＋低音嗶嗶（相機畫面也看得到）
+  let dupTimer=0;
+  function dupAlert(code, sub){
+    buzz([80,60,80]); let el=$('dupAlert'); if(!el){ el=document.createElement('div'); el.id='dupAlert'; el.setAttribute('role','alert'); document.body.appendChild(el); el.onclick=()=>el.classList.remove('on'); }
+    el.innerHTML='<div class="da-in"><div class="da-t">⚠ 重複掃到</div><div class="da-c">'+esc(code)+'</div><div class="da-s">已經登記過了'+(sub?'<br>'+esc(sub):'')+'</div></div>';
+    el.classList.remove('on'); void el.offsetWidth; el.classList.add('on'); clearTimeout(dupTimer); dupTimer=setTimeout(()=>el.classList.remove('on'),2600);
+    camToast('⚠ 重複掃到', esc(code)+'<br>已經登記過了'+(sub?'<br>'+esc(sub):''), true);
+  }
   function say(t,cls){ const m=$('msg'); m.textContent=t; m.className='msg'+(cls?' '+cls:''); }
   // 像超商收銀：掃到就「嗶」一聲；錯誤或重複是低音「嗶嗶」
   let AC=null; const soundOn=()=>{ try{ return localStorage.getItem('slipBeep')!=='0'; }catch(_){ return true; } };
