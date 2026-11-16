@@ -828,7 +828,7 @@ td.min,th.min{color:var(--ok)}
   </section>
 
   <div class="foot">
-    <span><span id="syncState">連線中…</span> <small id="appVer" style="opacity:.6;margin-left:6px;white-space:nowrap">版本 v103</small></span>
+    <span><span id="syncState">連線中…</span> <small id="appVer" style="opacity:.6;margin-left:6px;white-space:nowrap">版本 v104</small></span>
     <span class="row" style="flex-wrap:wrap;justify-content:flex-end"><button id="install" hidden>安裝到手機</button><button id="csv">匯出 CSV</button><button id="wipe" style="color:var(--stamp);border-color:var(--stamp)">🗑 清除資料</button></span>
   </div>
   <div class="foot">
@@ -1166,7 +1166,10 @@ td.min,th.min{color:var(--ok)}
   let rpSub=0, rpArgs=null;
   function openRowPick(loc, cb, exceptId, title){
     rpArgs=[loc,cb,exceptId,title];
-    rpCb=cb; const has=/^\d+-\d+-/.test(loc||''), L=has?lix().get(placeOf(TODAY,'',loc).key):null, stk=STK(), G=CAP(), cnt={}, psz={};
+    rpCb=cb; const has=/^\d+-\d+-/.test(loc||''), S0=layout.subs||[]; if(rpSub>=S0.length) rpSub=0;
+    let eff=has?loc:'';   // 沒指定位置 → 用目前出貨日那一格＋選的區來算數量
+    if(!has){ const s=slotOf(current); if(s) eff=s.r+'-'+s.c+'-'+(S0.length>1?rpSub:subOf('')); }
+    const L=eff?lix().get(placeOf(TODAY,'',eff).key):null, stk=STK(), G=CAP(), cnt={}, psz={};
     let maxR=0; if(L) L.forEach((R,row)=>R.ids.forEach((idx,id)=>{ if(id===exceptId) return; const k=row+'-'+gOf(idx); cnt[k]=(cnt[k]||0)+1; if(R.cw&&!psz[k]) psz[k]=String(R.cw.get(id)||'').split('|')[1]; maxR=Math.max(maxR,row); }));
     const NR=Math.max(MAXR()&&MAXR()<=8?MAXR():1, maxR+(maxR>=(MAXR()||1)?1:0));
     const cur=exceptId?null:[stickyRow,stickyG];
@@ -1178,7 +1181,7 @@ td.min,th.min{color:var(--ok)}
       for(let g=1;g<=G;g++){ const n=cnt[r+'-'+g]||0, on=cur&&cur[0]===r&&cur[1]===g, ch=stkOf(psz[r+'-'+g]);
         h+='<button data-rp="'+r+'-'+g+'" class="'+(n>=ch?'full':n?'some':'')+(on?' on':'')+'"><b>第 '+g+' 格</b><small>'+(n?n+'/'+ch+'箱':'空')+'</small></button>'; }
       h+='</div>'; }
-    $('rpTitle').textContent=title||((has?locShort(loc)+'：':'')+'放哪一區、第幾列、第幾格？'); $('rpGrid').innerHTML=h+'</div><p class="meta">放滿了會自動接下一格。</p>'; $('rpick').hidden=false;
+    $('rpTitle').textContent=title||((has?locShort(loc)+'：':(eff?md(current)+' '+locShort(eff).replace(/・[^・]*$/,'')+'：':''))+'放哪一區、第幾列、第幾格？'); $('rpGrid').innerHTML=h+'</div><p class="meta">放滿了會自動接下一格。</p>'; $('rpick').hidden=false;
   }
   // 指定的列・格裡第一個空的位置（滿了接下一格）
   function freeInPile(date,size,loc,r,g,exceptId){
