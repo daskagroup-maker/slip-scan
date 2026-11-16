@@ -275,6 +275,10 @@ form.manual.big button{font-size:20px;padding:0 22px}
 .daytot span{display:flex;align-items:baseline;gap:3px;background:#e8eef6;border-radius:6px;padding:2px 7px;font-size:12px}
 .daytot span b{font-size:15px;margin-left:3px}
 .daytot span{cursor:pointer}
+.gunbar{display:flex;align-items:center;gap:8px;margin:0 0 10px;padding:9px 12px;border-radius:10px;background:#E4F2E8;color:#1F5E33;font-weight:700;font-size:15px}
+.gunbar .gdot{width:10px;height:10px;border-radius:50%;background:#1F7A3A;box-shadow:0 0 0 0 rgba(31,122,58,.5);animation:gpulse 2s infinite}
+@keyframes gpulse{70%{box-shadow:0 0 0 8px rgba(31,122,58,0)}100%{box-shadow:0 0 0 0 rgba(31,122,58,0)}}
+@media (prefers-reduced-motion: reduce){ .gunbar .gdot{animation:none} }
 .tloc{margin-top:6px;padding:6px 10px;border-radius:8px;background:#ffd60a;color:#1d2a44;font-weight:900;font-size:1.05em;line-height:1.3}
 #recent li{flex-wrap:wrap}
 #recent .rloc{flex:0 0 100%;font-size:14px;font-weight:700;color:var(--ink);margin-top:2px}
@@ -716,6 +720,8 @@ td.min,th.min{color:var(--ok)}
     <input type="checkbox" id="askEach" checked hidden>
     <div class="sticky light" id="stickyMain"></div>
     <div class="period" hidden style="display:none"><span>📅 出貨期間</span><input type="date" id="pStart"><span>～</span><input type="date" id="pEnd"></div>
+    <label class="check"><input type="checkbox" id="gunOn" checked> 🔫 條碼槍模式（不用點輸入框，直接掃）</label>
+    <label class="check"><input type="checkbox" id="beepOn" checked> 🔊 掃到時嗶一聲（重複或錯誤是「嗶嗶」）</label>
     <label class="check"><input type="checkbox" id="onlyTrack" checked> 只讀追蹤號碼（お問合せNo 12 碼），忽略傳票上其他條碼</label>
     <div id="eachOpts">
     <label class="check"><input type="checkbox" id="ocrDate" checked> 自動讀取傳票上的「発送日」當出貨日</label>
@@ -731,6 +737,7 @@ td.min,th.min{color:var(--ok)}
     </div>
   </div>
 
+  <div class="gunbar" id="gunBar"><span class="gdot"></span><span id="gunTxt">條碼槍待命中：直接掃就會登記</span></div>
   <button class="scanbtn" id="scan">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 8v8M10 8v8M13 8v8M16 8v8"/></svg>
     <span id="scanLbl">用相機掃描</span>
@@ -814,7 +821,7 @@ td.min,th.min{color:var(--ok)}
   </section>
 
   <div class="foot">
-    <span><span id="syncState">連線中…</span> <small id="appVer" style="opacity:.6;margin-left:6px;white-space:nowrap">版本 v99</small></span>
+    <span><span id="syncState">連線中…</span> <small id="appVer" style="opacity:.6;margin-left:6px;white-space:nowrap">版本 v101</small></span>
     <span class="row" style="flex-wrap:wrap;justify-content:flex-end"><button id="install" hidden>安裝到手機</button><button id="csv">匯出 CSV</button><button id="wipe" style="color:var(--stamp);border-color:var(--stamp)">🗑 清除資料</button></span>
   </div>
   <div class="foot">
@@ -1374,12 +1381,12 @@ td.min,th.min{color:var(--ok)}
         else fixPos(date,it,ok0);
         freshId=it.id; putItem(date,it); say('已更新 '+fmtCode(code)+' → '+locText(date,it.size,it.loc,it,it.order),'ok'); doneToast('✓ 已更新', code, date, it.size); render(); return;
         say('已更新 '+fmtCode(code)+' → '+sizeLbl(size),'ok'); doneToast('✓ 已更新', code, date, size); render(); putItem(date,same.item);
-      } else { say('「'+fmtCode(code)+'」在 '+md(date)+' 已經登記過了：'+locText(date,same.item.size,same.item.loc,same.item,same.item.order),'warn'); camToast('已經登記過', esc(fmtCode(code))+'<br>'+md(date), true); buzz([60,60,60]); }
+      } else { buzz([80,60,80]); say('「'+fmtCode(code)+'」在 '+md(date)+' 已經登記過了：'+locText(date,same.item.size,same.item.loc,same.item,same.item.order),'warn'); camToast('已經登記過', esc(fmtCode(code))+'<br>'+md(date), true); buzz([60,60,60]); }
       return;
     }
     if(hits.length){
       if(!explicit && stickyRow>0){ const h=hits[0], it=h.item, sp0=spotOf(h.date,it); if(loc) it.loc=loc; reSticky(h.date,it,sp0); freshId=it.id; putItem(h.date,it); say('已更新 '+fmtCode(code)+' → '+locText(h.date,it.size,it.loc,it,it.order),'ok'); doneToast('✓ 已更新', code, h.date, it.size); render(); return; }
-      if(!explicit){ const h0=hits.find(h=>!gone(h.date,h.item))||hits[0]; say('「'+fmtCode(code)+'」已登記在 '+hits.map(h=>md(h.date)).join('、')+'，沒有變更：'+locText(h0.date,h0.item.size,h0.item.loc,h0.item,h0.item.order),'warn'); camToast('已登記在 '+md(hits[0].date), esc(fmtCode(code))+'<br>沒有變更', true); buzz([60,60,60]); return; }
+      if(!explicit){ buzz([80,60,80]); const h0=hits.find(h=>!gone(h.date,h.item))||hits[0]; say('「'+fmtCode(code)+'」已登記在 '+hits.map(h=>md(h.date)).join('、')+'，沒有變更：'+locText(h0.date,h0.item.size,h0.item.loc,h0.item,h0.item.order),'warn'); camToast('已登記在 '+md(hits[0].date), esc(fmtCode(code))+'<br>沒有變更', true); buzz([60,60,60]); return; }
       const h=hits[0], it=h.item, from=h.date;
       days[from].items=days[from].items.filter(i=>i!==it); if(!days[from].items.length) delete days[from];
       hits.slice(1).forEach(x=>{ days[x.date].items=days[x.date].items.filter(i=>i!==x.item); if(!days[x.date].items.length) delete days[x.date]; delItem(x.date,x.item.id); });
@@ -1566,7 +1573,15 @@ td.min,th.min{color:var(--ok)}
 
   /* ---------- render ---------- */
   function say(t,cls){ const m=$('msg'); m.textContent=t; m.className='msg'+(cls?' '+cls:''); }
-  function buzz(p){ try{ navigator.vibrate&&navigator.vibrate(p); }catch(e){} }
+  // 像超商收銀：掃到就「嗶」一聲；錯誤或重複是低音「嗶嗶」
+  let AC=null; const soundOn=()=>{ try{ return localStorage.getItem('slipBeep')!=='0'; }catch(_){ return true; } };
+  function unlockAudio(){ try{ if(!AC){ const C=window.AudioContext||window.webkitAudioContext; if(C) AC=new C(); } if(AC&&AC.state==='suspended') AC.resume(); }catch(_){} }
+  let lastBeep=0;
+  function beep(ok){ if(!soundOn()) return; const nw=Date.now(); if(ok && nw-lastBeep<250) return; lastBeep=nw; try{ unlockAudio(); if(!AC) return; const t=AC.currentTime;
+    const tone=(f,st,du)=>{ const o=AC.createOscillator(), g=AC.createGain(); o.type='square'; o.frequency.value=f; g.gain.setValueAtTime(0.0001,t+st); g.gain.exponentialRampToValueAtTime(0.18,t+st+0.01); g.gain.exponentialRampToValueAtTime(0.0001,t+st+du); o.connect(g); g.connect(AC.destination); o.start(t+st); o.stop(t+st+du+0.02); };
+    if(ok) tone(2700,0,0.09); else { tone(420,0,0.13); tone(420,0.18,0.13); } }catch(_){} }
+  function buzz(p){ beep(!Array.isArray(p)); try{ navigator.vibrate&&navigator.vibrate(p); }catch(e){} }
+  ['pointerdown','touchstart','keydown'].forEach(ev=>document.addEventListener(ev,unlockAudio,{once:true,passive:true}));
 
   function sizeCounts(items){
     const c={}; items.forEach(i=>{ const k=i.size||''; c[k]=(c[k]||0)+1; }); return c;
@@ -2394,7 +2409,7 @@ td.min,th.min{color:var(--ok)}
     // 查詢：只用手動輸入（不開相機）
     $('scan').style.display = m==='look' ? 'none' : ''; document.querySelector('.alt').style.display = m==='look' ? 'none' : '';
     $('manual').placeholder = m==='look' ? '🔍 追蹤號碼（後4碼也可）' : '手動輸入或接掃描槍';
-    $('manual').setAttribute('inputmode', m==='look' ? 'numeric' : 'text');
+    $('manual').setAttribute('inputmode', m==='look' ? 'numeric' : 'text'); try{ gunUI(); }catch(_){}
     $('lookup').classList.remove('on'); say('');
     if(m==='look') showTab('map');
   }
@@ -2417,6 +2432,24 @@ td.min,th.min{color:var(--ok)}
   $('tabFind').onclick=()=>{ showTab('find'); renderFind(); $('q').focus(); };
   $('q').oninput=renderFind;
   $('addManual').onclick=()=>{ const v=$('manual').value; $('manual').value=''; lastCode=''; onCode(v,true); if(!sheetOpen) $('manual').focus(); };
+  /* 條碼槍模式（預設）：條碼槍打字很快、最後按 Enter → 不管游標在哪都直接登記／查詢 */
+  const gunOn=()=>{ try{ return localStorage.getItem('slipGun')!=='0'; }catch(_){ return true; } };
+  let gBuf='', gT0=0, gT1=0;
+  function gunUI(){ const on=gunOn(); $('gunBar').hidden=!on; $('manual').setAttribute('inputmode', on?'none':(appMode==='look'?'numeric':'text'));
+    $('gunTxt').textContent = appMode==='look' ? '條碼槍待命中：直接掃就會查詢' : '條碼槍待命中：直接掃就會登記'; }
+  document.addEventListener('keydown',e=>{
+    if(!gunOn() || e.ctrlKey || e.metaKey || e.altKey) return;
+    const t=e.target, tag=(t&&t.tagName)||''; if(t!==$('manual') && (tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT'||t.isContentEditable)) return;
+    if(t===$('manual')) return;   // 在輸入框裡就照一般方式（Enter 送出）
+    const now=performance.now();
+    if(e.key==='Enter'){ const fast=gBuf.length>=8 && (gT1-gT0)/Math.max(1,gBuf.length-1)<60;
+      if(fast){ e.preventDefault(); const v=gBuf; gBuf=''; lastCode=''; onCode(v,true); } gBuf=''; return; }
+    if(e.key.length===1){ if(!gBuf || now-gT1>120){ gBuf=''; gT0=now; } gBuf+=e.key; gT1=now; }
+  },true);
+  $('manual').addEventListener('pointerdown',()=>{ if(gunOn()) $('manual').setAttribute('inputmode', appMode==='look'?'numeric':'text'); });   // 要手打時點一下就跳出鍵盤
+  $('manual').addEventListener('blur',()=>{ if(gunOn()) $('manual').setAttribute('inputmode','none'); });
+  $('gunOn').checked=gunOn(); $('gunOn').onchange=e=>{ try{ localStorage.setItem('slipGun',e.target.checked?'1':'0'); }catch(_){} gunUI(); };
+  gunUI();
 
   document.addEventListener('click',e=>{
     const t=e.target;
@@ -2618,7 +2651,8 @@ td.min,th.min{color:var(--ok)}
     if(text===candCode && now-candAt<2500){ candCode=''; vfGot(); onCode(text); }
     else { candCode=text; candAt=now; }
   }
-  $('scan').onclick=()=>startCamera('scan');
+  $('beepOn').checked=soundOn(); $('beepOn').onchange=e=>{ try{ localStorage.setItem('slipBeep',e.target.checked?'1':'0'); }catch(_){} if(e.target.checked){ unlockAudio(); beep(true); } };
+  $('scan').onclick=()=>{ unlockAudio(); startCamera('scan'); };
 
   /* 條碼引擎：Android Chrome 用內建 BarcodeDetector（最快），其他（iPhone 等）用 ZXing WebAssembly */
   let detector=null, detKind='';
