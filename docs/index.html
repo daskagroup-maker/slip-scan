@@ -277,12 +277,15 @@ form.manual.big button{font-size:20px;padding:0 22px}
 .daytot span{cursor:pointer}
 #dupAlert{position:fixed;left:50%;top:38%;transform:translate(-50%,-50%) scale(.9);z-index:9999;opacity:0;pointer-events:none;transition:opacity .15s,transform .15s;width:min(88vw,420px)}
 #dupAlert.ok .da-in{background:#1F7A3A}
+.colbtns{display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap;margin-left:6px}
+.colbtn{min-height:36px;padding:0 12px;border-radius:10px;border:2px solid var(--ink,#14213D);background:#fff;color:var(--ink,#14213D);font-weight:800;font-size:14px}
+.colbtn[data-addcol]{background:var(--tape,#FFD60A)}
 .pkbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .pkbtn{min-height:44px;padding:0 14px;border-radius:12px;border:2px solid var(--ink,#14213D);background:var(--tape,#FFD60A);color:#14213D;font-weight:900;font-size:15px}
 .pkbtn.on{background:#fff}
 .pkhint{margin:4px 0 8px;padding:8px 10px;border-radius:10px;background:#FFF6C2;border:2px dashed #14213D;font-weight:700;font-size:14px;line-height:1.5;color:#14213D}
 .ic.pk{border:2px dashed #8A94A6;background:#fff;color:#14213D;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center}
-.ic.pk.some{border-style:solid;background:#E7EAED}.ic.pk.full2{background:#C9CED6}
+.ic.pk.some{border:2px solid #14213D;color:#14213D;text-shadow:0 0 3px #fff,0 0 3px #fff}.ic.pk.some small{font-weight:900;font-size:10px;line-height:1.1}.ic.pk.full2::after{content:'滿';position:absolute;top:-6px;right:-6px;background:#C8372D;color:#fff;font-size:10px;font-weight:900;border-radius:8px;padding:1px 4px;text-shadow:none}.ic.pk{position:relative}
 .ic.stk{outline:4px solid #FFD60A;outline-offset:-2px;box-shadow:0 0 0 2px #14213D}
 #dupAlert.on{opacity:1;transform:translate(-50%,-50%) scale(1);pointer-events:auto}
 #dupAlert .da-in{background:#C8372D;color:#fff;border-radius:18px;padding:18px 16px;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.35)}
@@ -836,7 +839,7 @@ td.min,th.min{color:var(--ok)}
   </section>
 
   <div class="foot">
-    <span><span id="syncState">連線中…</span> <small id="appVer" style="opacity:.6;margin-left:6px;white-space:nowrap">版本 v106</small></span>
+    <span><span id="syncState">連線中…</span> <small id="appVer" style="opacity:.6;margin-left:6px;white-space:nowrap">版本 v108</small></span>
     <span class="row" style="flex-wrap:wrap;justify-content:flex-end"><button id="install" hidden>安裝到手機</button><button id="csv">匯出 CSV</button><button id="wipe" style="color:var(--stamp);border-color:var(--stamp)">🗑 清除資料</button></span>
   </div>
   <div class="foot">
@@ -1986,7 +1989,10 @@ td.min,th.min{color:var(--ok)}
           for(let k=1;k<=A.depth;k++){ const pile=C.R[k];
             const isStk = stickyLoc===sid+'-'+subI && stickyRow===C.r && (!pileMode()||stickyG===k);
             if(mapPick){ const n=pile?pile.length:0, ch=stkOf(n?pile[0].it.size:'');
-              h+='<button type="button" class="ic pk'+(n?' some':'')+(n>=ch?' full2':'')+(isStk?' stk':'')+'" data-setloc="'+sid+'-'+subI+'|'+C.r+'|'+k+'" aria-label="指定放第'+C.r+'列第'+k+'格">'+(n?'<b>'+n+'</b><small>箱</small>':'')+'</button>'; continue; }
+              const ws=n?[...new Set(pile.map(q=>wdOf(q.it.order)))]:[], cs=ws.map(w=>w==='x'?'#cfd5dd':'rgb('+colors[w].rgb.join(',')+')');
+              const bg=!n?'':cs.length===1?cs[0]:'linear-gradient(to top,'+cs.map((c,i)=>c+' '+(i*100/cs.length)+'% '+((i+1)*100/cs.length)+'%').join(',')+')';
+              const cn=ws.map(w=>w==='x'?'無':COLNAME(w)).join('・');
+              h+='<button type="button" class="ic pk'+(n?' some':'')+(n>=ch?' full2':'')+(isStk?' stk':'')+'"'+(n?' style="background:'+bg+'"':'')+' data-setloc="'+sid+'-'+subI+'|'+C.r+'|'+k+'" aria-label="指定放第'+C.r+'列第'+k+'格'+(n?'，'+cn+' '+n+'箱':'，空的')+'">'+(n?'<b>'+n+'</b><small>'+esc(cn)+'</small>':'')+'</button>'; continue; }
             if(!pile||!pile.length){ h+='<span class="ic'+(isStk?' stk':'')+'"></span>'; continue; }
             const x=pile.find(q=>q.it.id===findHi)||pile.find(q=>q.it.id===cellHi)||pile[pile.length-1];
             const cs=pile.map(q=>{ const qw=wdOf(q.it.order); return qw==='x'?'#cfd5dd':'rgb('+colors[qw].rgb.join(',')+')'; });
@@ -2094,7 +2100,7 @@ td.min,th.min{color:var(--ok)}
     const S=layout.subs||[];
     let h='<div class="wh">'; const VR=visRows();
     layout.rows.forEach((row,r)=>{ if(!VR.includes(r)) return;
-      h+='<div class="whlbl">'+esc((layout.names&&layout.names[r])||('第'+(r+1)+'排'))+(mapEdit?' <button type="button" class="linkbtn" data-delrow="'+r+'" style="color:var(--stamp);margin-left:8px">🗑 刪除這一排</button>':'　<span style="opacity:.8">點格子看裡面怎麼擺</span>')+'</div><div class="'+(mapEdit?'whedit':'whrow')+'" style="grid-template-columns:repeat('+row.length+',minmax(112px,1fr))">';
+      h+='<div class="whlbl">'+esc((layout.names&&layout.names[r])||('第'+(r+1)+'排'))+(mapEdit?' <span class="colbtns"><button type="button" class="colbtn" data-addcol="'+r+'">＋ 加一格</button>'+(row.length>1?'<button type="button" class="colbtn" data-delcol="'+r+'">－ 減最後一格</button>':'')+'<span class="meta">共 '+row.length+' 格</span></span> <button type="button" class="linkbtn" data-delrow="'+r+'" style="color:var(--stamp);margin-left:8px">🗑 刪除這一排</button>':'　<span style="opacity:.8">點格子看裡面怎麼擺</span>')+'</div><div class="'+(mapEdit?'whedit':'whrow')+'" style="grid-template-columns:repeat('+row.length+',minmax(112px,1fr))">';
       row.forEach((keys,c)=>{
         const id=r+'-'+c, L=cell[id]||[];
         if(mapEdit){ h+='<label class="ledit"><span>'+esc((layout.names&&layout.names[r])||'')+' '+(c+1)+' 號</span><input data-lay="'+id+'" value="'+keys.map(mdk).join(', ')+'" placeholder="例：1/27, 2/13" inputmode="text"></label>'; return; }
@@ -2322,6 +2328,12 @@ td.min,th.min{color:var(--ok)}
     const mb=e.target.closest('[data-map]'); if(mb){ if(mapEdit) readLay(); setMap(mb.dataset.map); mapSel=null; renderMap(); return; }
     const mv=e.target.closest('[data-submv]'); if(mv){ const [a,d]=mv.dataset.submv.split('|').map(Number); moveSub(a,a+d); return; }
     const dr=e.target.closest('[data-delrow]'); if(dr){ delRows([+dr.dataset.delrow]); return; }
+    const ac=e.target.closest('[data-addcol]'); if(ac){ readLay(); const r=+ac.dataset.addcol; layout.rows[r].push([]); renderMap();
+      say('已加一格（第 '+layout.rows[r].length+' 號），輸入出貨日後按「✏️ 編輯位置」存好','ok'); setTimeout(()=>{ const t=document.querySelector('[data-lay="'+r+'-'+(layout.rows[r].length-1)+'"]'); if(t){ t.scrollIntoView({block:'nearest',inline:'center',behavior:'smooth'}); t.focus(); } },50); return; }
+    const dc=e.target.closest('[data-delcol]'); if(dc){ readLay(); const r=+dc.dataset.delcol, c=layout.rows[r].length-1;
+      let n=0; for(const d in days) days[d].items.forEach(it=>{ if(gone(d,it)) return; const P=placeOf(d,it.size,it.loc); if(P&&P.free==null&&P.r===r&&P.c===c) n++; });
+      if(n){ say('第 '+(c+1)+' 號還有 '+n+' 箱貨，先把貨移走才能減','warn'); return; }
+      layout.rows[r].pop(); renderMap(); say('已減掉最後一格，按「✏️ 編輯位置」存好','ok'); return; }
     if(e.target.closest('#delMapBtn')){ const m=theMap(); delRows(visRows(), m); return; }
     if(e.target.closest('#addRowBtn')){ readLay(); fixRmap(); const m=theMap(), VR=visRows(), cols=VR.length?layout.rows[VR[0]].length:7;
       const nm=prompt('新的一排叫什麼名字？', '第'+(VR.length+1)+'排'); if(nm===null) return;
