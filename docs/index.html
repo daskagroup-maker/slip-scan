@@ -839,7 +839,7 @@ td.min,th.min{color:var(--ok)}
   </section>
 
   <div class="foot">
-    <span><span id="syncState">連線中…</span> <small id="appVer" style="opacity:.6;margin-left:6px;white-space:nowrap">版本 v108</small></span>
+    <span><span id="syncState">連線中…</span> <small id="appVer" style="opacity:.6;margin-left:6px;white-space:nowrap">版本 v109</small></span>
     <span class="row" style="flex-wrap:wrap;justify-content:flex-end"><button id="install" hidden>安裝到手機</button><button id="csv">匯出 CSV</button><button id="wipe" style="color:var(--stamp);border-color:var(--stamp)">🗑 清除資料</button></span>
   </div>
   <div class="foot">
@@ -901,11 +901,20 @@ td.min,th.min{color:var(--ok)}
 
   const sizeColor = s => { const i = sizes.indexOf(s); return i<0 ? 'var(--sx)' : 'var(--s'+(i%7)+')'; };
   const sizeLbl = s => s ? s : '未分';
+  // XXS：一樣是 60 的箱子，只是可以疊比較高（另外設定疊幾箱）。分區時跟 60 放同一區
+  const sizeBase = s => /^X*S$/i.test(String(s||'')) ? '60' : String(s||'');
+  function ensureXXS(){   // 一次性：尺寸裡加上 XXS（放在 60 前面）。之後自己刪掉也不會再加回來
+    let done=false; try{ done=localStorage.getItem('slipXXSv1')==='1'; }catch(_){}
+    if(done) return false; try{ localStorage.setItem('slipXXSv1','1'); }catch(_){}
+    if(sizes.includes('XXS')) return false;
+    const i=sizes.indexOf('60'); sizes.splice(i<0?0:i,0,'XXS'); return true;
+  }
 
   /* ---------- storage ---------- */
   function loadLocal(){
     try{ days = JSON.parse(localStorage.getItem('slipDays')||'{}'); }catch(e){ days = {}; }
     try{ const s = JSON.parse(localStorage.getItem('slipSizes')||'null'); if(Array.isArray(s)&&s.length) sizes = s; }catch(e){}
+    try{ if(localStorage.getItem('slipXXSv1')!=='1' && !sizes.includes('XXS')){ const i=sizes.indexOf('60'); sizes.splice(i<0?0:i,0,'XXS'); } }catch(e){}   // 先顯示，雲端那邊會正式存
     try{ const c = localStorage.getItem('slipCurSize'); if(c) curSize = c; }catch(e){}
   }
   function saveLocal(){ try{ localStorage.setItem('slipDays', JSON.stringify(days)); localStorage.setItem('slipSizes', JSON.stringify(sizes)); }catch(e){} }
@@ -1016,7 +1025,7 @@ td.min,th.min{color:var(--ok)}
     rtdb.ref(ROOT+'/shipOffset').on('value',s=>{ const v=s.val(); if(v!==null && v!==undefined && document.activeElement!==$('cOff')){ $('cOff').value=v; try{localStorage.setItem('slipOff',v);}catch(_){} } }, ()=>{});
     rtdb.ref(ROOT+'/sizes').on('value',s=>{
       const v=s.val(); const list=Array.isArray(v)?v:(v?Object.values(v):null);
-      if(list&&list.length){ sizes=list.map(String); if(!sizes.includes(curSize)) curSize=sizes[0]; saveLocal(); render(); }
+      if(list&&list.length){ sizes=list.map(String); const add=ensureXXS(); if(!sizes.includes(curSize)) curSize=sizes[0]; saveLocal(); render(); if(add) persistSizes(); }
     }, ()=>{});
   }
   function setSync(cached){ $('syncState').textContent = mode==='db' ? (Q.length ? '⏳ '+Q.length+' 筆等待上傳'+(online?'…':'（離線中）') : online?'✓ 已同步雲端':'離線中，連線後自動同步') : '儲存在這台裝置'; }
@@ -1678,7 +1687,7 @@ td.min,th.min{color:var(--ok)}
   const visRows=()=>layout.rows.map((_,r)=>r).filter(r=>rmapOf(r)===theMap());
   const slotName=s=>(mapList().length>1?rmapOf(s.r)+'・':'')+(layout.names&&layout.names[s.r]||('第'+(s.r+1)+'排'))+' '+(s.c+1)+' 號';
   // 格子裡依尺寸分小格（沒列到的尺寸放最後一小格）
-  function subOf(size){ const S=layout.subs||[]; if(!S.length) return -1; if(layout.anySize) return 0; const i=S.findIndex(x=>(x.s||[]).includes(String(size||''))); return i<0?S.length-1:i; }
+  function subOf(size){ const S=layout.subs||[]; if(!S.length) return -1; if(layout.anySize) return 0; let i=S.findIndex(x=>(x.s||[]).includes(String(size||''))); if(i<0) i=S.findIndex(x=>(x.s||[]).includes(sizeBase(size))); return i<0?S.length-1:i; }
   const subName=i=>i<0?'':((layout.subs[i]||{}).n||'');
   // 位置：有指定（loc）就用指定的，否則依出貨日＋尺寸自動算。loc 格式：'排-格-小格' 或 'x:自由文字'
   function placeOf(date,size,loc){
